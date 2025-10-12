@@ -8,10 +8,11 @@ from typing import Dict, Any, List, Optional
 import boto3
 import requests
 
+# Spotify API credentials from Secrets Manager
 _secrets_arn = os.environ.get("SPOTIFY_SECRET_ARN")
 _sm = boto3.client("secretsmanager")
 
-
+# Simple client credentials flow for server-to-server auth
 def _get_spotify_creds() -> Dict[str, str]:
     if not _secrets_arn:
         raise RuntimeError("SPOTIFY_SECRET_ARN not set")
@@ -23,7 +24,7 @@ def _get_spotify_creds() -> Dict[str, str]:
         "client_secret": data.get("spotify_client_secret", ""),
     }
 
-
+# Obtain an access token using Client Credentials Flow
 def get_access_token() -> str:
     creds = _get_spotify_creds()
     r = requests.post(
@@ -35,7 +36,7 @@ def get_access_token() -> str:
     r.raise_for_status()
     return r.json()["access_token"]
 
-
+# Search for tracks matching a query string
 def search_track(q: str, token: Optional[str] = None) -> List[Dict[str, Any]]:
     token = token or get_access_token()
     r = requests.get(

@@ -18,7 +18,7 @@ dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME) if TABLE_NAME else None
 s3 = boto3.client("s3")
 
-
+# Placeholder for future Bedrock-powered parsing if needed
 def _placeholder_bedrock_and_spotify(prompt: str, count: int) -> List[Dict[str, Any]]:
     """Placeholder logic that simulates AI + Spotify recommendation results."""
     results = []
@@ -33,7 +33,7 @@ def _placeholder_bedrock_and_spotify(prompt: str, count: int) -> List[Dict[str, 
         )
     return results
 
-
+# Lambda function handler
 def lambda_handler(event, context):
     if not table:
         raise RuntimeError("TABLE_NAME not configured")

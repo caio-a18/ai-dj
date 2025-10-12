@@ -6,9 +6,10 @@ from typing import Tuple
 
 import boto3
 
+# Bedrock client
 BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 
-
+# Naive parse: extract quoted song if present; fallback to whole prompt; count default=20.
 def extract_base_query(prompt: str) -> Tuple[str, int]:
     """Naive parse: extract quoted song if present; fallback to whole prompt; count default=20.
     e.g., "generate me a playlist of 20 songs like 'Blinding Lights'" -> ("Blinding Lights", 20)
@@ -24,6 +25,6 @@ def extract_base_query(prompt: str) -> Tuple[str, int]:
         base = prompt if not parts else " ".join(prompt.split()[-5:])
     return base.strip(), count
 
-# Placeholder for future Bedrock-powered parsing if needed
+# Placeholder for future Bedrock-powered parsing
 def bedrock_enhance_query(prompt: str) -> Tuple[str, int]:
     return extract_base_query(prompt)
