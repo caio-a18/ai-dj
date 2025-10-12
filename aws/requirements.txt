@@ -3,3 +3,4 @@ constructs>=10.0.0,<11
 aws-cdk.aws-apigatewayv2-alpha>=2.151.0a0,<3
 aws-cdk.aws-apigatewayv2-integrations-alpha>=2.151.0a0,<3
 aws-cdk.aws-lambda-python-alpha>=2.151.0a0,<3
+aws-cdk.aws-apigatewayv2-authorizers-alpha>=2.151.0a0,<3

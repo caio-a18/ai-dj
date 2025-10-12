@@ -35,6 +35,44 @@ flowchart TD
 	worker --> spotify
 	spotify -.-> secret
 ```
+
+### Request flow (Mermaid)
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant F as Frontend
+	participant C as Cognito
+	participant G as API Gateway
+	participant A as API Lambda
+	participant Q as SQS
+	participant W as Worker Lambda
+	participant D as DynamoDB
+	participant B as S3
+	participant R as Bedrock
+	participant S as Spotify
+	participant X as Secrets Manager
+
+	U->>F: Sign in
+	F->>C: Authenticate
+	C-->>F: ID token
+	U->>F: Generate playlist prompt
+	F->>G: POST /playlists/request (JWT)
+	G->>A: Invoke
+	A->>Q: Send message
+	A-->>F: 202 Accepted
+
+	Q->>W: Event
+	W->>R: Parse intent (optional)
+	W->>X: Get Spotify creds
+	W->>S: Search tracks
+	W->>D: Put playlist item
+	W->>B: Store artifacts (optional)
+	F->>G: GET /playlists/{id} (JWT)
+	G->>A: Invoke
+	A->>D: Get item
+	A-->>F: Playlist JSON
+```
 ```
 
 ## Folder structure
@@ -113,4 +151,6 @@ Outputs will include:
 - Add Cognito authorizers for protected routes.
 - Add CloudWatch dashboards/alarms.
 - Optionally split stacks (networking, data, compute) and add stages (dev/prod).
+
+Optionally split stacks (networking, data, compute) and add stages (dev/prod).
 

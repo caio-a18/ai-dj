@@ -53,6 +53,19 @@ def request_playlist(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {"status": "queued"}
 
 
+@app.get("/spotify/auth-url")
+def spotify_auth_url() -> Dict[str, Any]:
+    # Placeholder: in Phase 2, generate a PKCE auth URL or server-side OAuth URL
+    arn = os.environ.get("SPOTIFY_SECRET_ARN")
+    return {"status": "ok", "configured": bool(arn)}
+
+
+@app.get("/spotify/callback")
+def spotify_callback(code: str | None = None, state: str | None = None) -> Dict[str, Any]:
+    # Placeholder: handle OAuth callback and exchange code for tokens
+    return {"status": "todo", "code": bool(code), "state": state}
+
+
 @app.get("/playlists/{playlist_id}")
 def get_playlist(playlist_id: str) -> Dict[str, Any]:
     if not table:

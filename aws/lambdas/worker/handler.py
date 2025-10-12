@@ -7,6 +7,8 @@ import uuid
 from typing import Any, Dict, List
 
 import boto3
+from . import spotify as spotify_client  # type: ignore
+from . import nlp
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "")
 BUCKET_NAME = os.environ.get("BUCKET_NAME", "")
@@ -43,11 +45,21 @@ def lambda_handler(event, context):
                 continue
             prompt = body.get("prompt")
             user_id = body.get("user_id")
-            count = int(body.get("count") or 20)
+            # Try to derive count/base from prompt if not provided
+            base, derived_count = nlp.bedrock_enhance_query(prompt or "")
+            count = int(body.get("count") or derived_count or 20)
             playlist_id = str(uuid.uuid4())
 
-            # Simulate AI+Spotify
-            songs = _placeholder_bedrock_and_spotify(prompt, count)
+            # If Secrets Manager ARN is set, try real Spotify search for base; then fill with mocks
+            songs: List[Dict[str, Any]] = []
+            try:
+                if os.environ.get("SPOTIFY_SECRET_ARN") and base:
+                    seeds = spotify_client.search_track(base)
+                    songs.extend(seeds[: min(len(seeds), count)])
+            except Exception as e:
+                print(f"Spotify lookup failed, fallback to mock: {e}")
+            if len(songs) < count:
+                songs.extend(_placeholder_bedrock_and_spotify(prompt or base, count - len(songs)))
 
             item = {
                 "playlist_id": playlist_id,

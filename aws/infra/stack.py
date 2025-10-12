@@ -24,6 +24,7 @@ from aws_cdk import (
     aws_apigatewayv2_alpha as apigwv2,
     aws_apigatewayv2_integrations_alpha as apigwv2_integrations,
 )
+from aws_cdk import aws_apigatewayv2_authorizers_alpha as apigwv2_auth
 from aws_cdk import aws_cognito as cognito
 
 try:
@@ -209,11 +210,8 @@ class AiDjStack(Stack):
             ),
         )
 
-        http_api.add_routes(
-            path="/{proxy+}",
-            methods=[apigwv2.HttpMethod.ANY],
-            integration=apigwv2_integrations.HttpLambdaIntegration("ApiIntegration", api_fn),
-        )
+        # Define authorizer using Cognito (created below)
+        # We'll attach it after user pool creation.
         # Cognito User Pool and App Client
         user_pool = cognito.UserPool(
             self,
@@ -239,6 +237,28 @@ class AiDjStack(Stack):
                 logout_urls=["http://localhost:3000"],
             ),
             generate_secret=False,
+        )
+
+        # Create a Cognito authorizer for HTTP API
+        user_pool_authorizer = apigwv2_auth.HttpUserPoolAuthorizer(
+            "CognitoAuthorizer",
+            user_pool,
+            user_pool_client,
+        )
+
+        # Public health route
+        http_api.add_routes(
+            path="/health",
+            methods=[apigwv2.HttpMethod.ANY],
+            integration=apigwv2_integrations.HttpLambdaIntegration("ApiIntegrationHealth", api_fn),
+        )
+
+        # Protected catch-all proxy route
+        http_api.add_routes(
+            path="/{proxy+}",
+            methods=[apigwv2.HttpMethod.ANY],
+            integration=apigwv2_integrations.HttpLambdaIntegration("ApiIntegrationProxy", api_fn),
+            authorizer=user_pool_authorizer,
         )
 
         # Note: Configure API auth at the route level later if needed
