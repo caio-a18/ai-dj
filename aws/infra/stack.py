@@ -50,6 +50,7 @@ class AiDjStack(Stack):
 
         # Config
         allowed_origins = allowed_origins or [
+            "http://127.0.0.1:3000",
             "http://localhost:3000",
             "https://localhost:3000",
             "https://*.vercel.app",
@@ -141,7 +142,7 @@ class AiDjStack(Stack):
                 environment=api_env,
             )
 
-        table.grant_read_data(api_fn)
+        table.grant_read_write_data(api_fn)
         queue.grant_send_messages(api_fn)
         if secret is not None:
             secret.grant_read(api_fn)
@@ -233,8 +234,8 @@ class AiDjStack(Stack):
             auth_flows=cognito.AuthFlow(user_password=True, user_srp=True),
             o_auth=cognito.OAuthSettings(
                 flows=cognito.OAuthFlows(authorization_code_grant=True, implicit_code_grant=False),
-                callback_urls=["http://localhost:3000/callback"],
-                logout_urls=["http://localhost:3000"],
+                callback_urls=["http://127.0.0.1:3000/callback"],
+                logout_urls=["http://127.0.0.1:3000"],
             ),
             generate_secret=False,
         )

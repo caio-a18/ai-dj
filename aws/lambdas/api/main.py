@@ -8,6 +8,8 @@ from typing import Any, Dict, List
 from fastapi import FastAPI, HTTPException
 from mangum import Mangum
 import boto3
+import base64
+import requests
 
 # Environment variables
 TABLE_NAME = os.environ.get("TABLE_NAME", "")
@@ -18,6 +20,7 @@ ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*")
 dynamodb = boto3.resource("dynamodb")
 sqs = boto3.client("sqs")
 table = dynamodb.Table(TABLE_NAME) if TABLE_NAME else None
+secrets = boto3.client("secretsmanager")
 # FastAPI app
 app = FastAPI(title="AI-DJ API", version="0.1.0")
 
@@ -57,15 +60,64 @@ def request_playlist(payload: Dict[str, Any]) -> Dict[str, Any]:
 # Spotify OAuth endpoints (placeholders for Phase 2)
 @app.get("/spotify/auth-url")
 def spotify_auth_url() -> Dict[str, Any]:
-    # Placeholder: in Phase 2, generate a PKCE auth URL or server-side OAuth URL
     arn = os.environ.get("SPOTIFY_SECRET_ARN")
-    return {"status": "ok", "configured": bool(arn)}
+    if not arn:
+        return {"status": "error", "message": "SPOTIFY_SECRET_ARN not configured"}
+    # Fetch creds and redirect_uri from Secrets Manager
+    secret = secrets.get_secret_value(SecretId=arn).get("SecretString") or "{}"
+    data = json.loads(secret)
+    client_id = data.get("spotify_client_id")
+    redirect_uri = data.get("spotify_redirect_uri") or "http://127.0.0.1:3000/callback"
+    scopes = "user-read-email playlist-modify-private playlist-modify-public"
+    # Basic, non-PKCE URL (PKCE recommended for SPA; here we use server-side exchange)
+    url = (
+        "https://accounts.spotify.com/authorize?"
+        f"client_id={client_id}&response_type=code&redirect_uri={requests.utils.quote(redirect_uri, safe='')}"
+        f"&scope={requests.utils.quote(scopes, safe=' ')}"
+    )
+    return {"url": url}
 
 # Spotify OAuth callback endpoint
 @app.get("/spotify/callback")
-def spotify_callback(code: str | None = None, state: str | None = None) -> Dict[str, Any]:
-    # Placeholder: handle OAuth callback and exchange code for tokens
-    return {"status": "todo", "code": bool(code), "state": state}
+def spotify_callback(code: str | None = None, state: str | None = None, user_id: str | None = None) -> Dict[str, Any]:
+    if not code:
+        raise HTTPException(status_code=400, detail="missing code")
+    arn = os.environ.get("SPOTIFY_SECRET_ARN")
+    if not arn:
+        raise HTTPException(status_code=500, detail="SPOTIFY_SECRET_ARN not configured")
+    secret = secrets.get_secret_value(SecretId=arn).get("SecretString") or "{}"
+    data = json.loads(secret)
+    client_id = data.get("spotify_client_id")
+    client_secret = data.get("spotify_client_secret")
+    redirect_uri = data.get("spotify_redirect_uri") or "http://127.0.0.1:3000/callback"
+
+    basic = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    resp = requests.post(
+        "https://accounts.spotify.com/api/token",
+        headers={"Authorization": f"Basic {basic}", "Content-Type": "application/x-www-form-urlencoded"},
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+        },
+        timeout=20,
+    )
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    tokens = resp.json()
+
+    # Persist tokens keyed by user_id if provided; otherwise return them directly
+    if table and user_id:
+        table.put_item(
+            Item={
+                "playlist_id": f"auth:{user_id}",
+                "user_id": user_id,
+                "spotify_tokens": tokens,
+                "status": "auth",
+            }
+        )
+        return {"status": "saved", "user_id": user_id}
+    return {"status": "ok", "tokens": {k: tokens.get(k) for k in ["access_token", "refresh_token", "expires_in"]}}
 
 # Get playlist by ID
 @app.get("/playlists/{playlist_id}")
