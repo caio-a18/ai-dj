@@ -16,68 +16,68 @@ See detailed deployment/setup steps at the bottom of this file.
 
 ```mermaid
 flowchart TD
-	subgraph Client
-		A[User]
-		B[Frontend<br/>React/Next.js (Vercel/local)]
-	end
+  subgraph Client
+    A[User]
+    B[Frontend (React/Next.js)]
+  end
 
-	subgraph Auth
-		C[Cognito User Pool]
-		Cc[Cognito App Client]
-	end
+  subgraph Auth
+    C[Cognito User Pool]
+    Cc[Cognito App Client]
+  end
 
-	subgraph API
-		D[API Gateway<br/>HTTP API]
-		E[Lambda: FastAPI<br/>(Mangum handler)]
-	end
+  subgraph API
+    D[API Gateway HTTP API]
+    E[Lambda: FastAPI (Mangum)]
+  end
 
-	subgraph Async
-		F[SQS Queue<br/>playlist-requests]
-		M[DLQ]
-	end
+  subgraph Async
+    F[SQS Queue: playlist-requests]
+    M[DLQ]
+  end
 
-	subgraph Compute
-		G[Lambda Worker<br/>SQS Consumer]
-	end
+  subgraph Compute
+    G[Lambda Worker (SQS Consumer)]
+  end
 
-	subgraph Data
-		H[(DynamoDB<br/>Playlists Table)]
-		I[S3 Bucket<br/>Data/Generated Audio]
-	end
+  subgraph Data
+    H[(DynamoDB Playlists Table)]
+    I[S3 Bucket: Data and Generated Audio]
+  end
 
-	subgraph External Services
-		J[Amazon Bedrock<br/>Model Inference]
-		K[Spotify Web API]
-		L[[Secrets Manager<br/>Spotify Credentials]]
-	end
+  subgraph External Services
+    J[Amazon Bedrock: Model Inference]
+    K[Spotify Web API]
+    L[[Secrets Manager: Spotify Credentials]]
+  end
 
-	%% Client/Auth
-	A --> B
-	B -->|Sign-up/Sign-in| C
-	C --> Cc
+  %% Client/Auth
+  A --> B
+  B -->|Sign-up/Sign-in| C
+  C --> Cc
 
-	%% Client/API
-	B -->|REST (CORS)| D
-	D --> E
+  %% Client/API
+  B -->|REST (CORS)| D
+  D --> E
 
-	%% API -> Async + DB
-	E -->|SendMessage| F
-	E -->|Read| H
+  %% API -> Async + DB
+  E -->|SendMessage| F
+  E -->|Read| H
 
-	%% Queue -> Worker
-	F -->|Event Source| G
-	F --> M
+  %% Queue -> Worker
+  F -->|Event Source| G
+  F --> M
 
-	%% Worker -> Data & Services
-	G -->|Read/Write| H
-	G -->|Read/Write| I
-	G -->|InvokeModel| J
-	G -->|Recommendations/Search| K
-	K -.uses creds .-> L
+  %% Worker -> Data & Services
+  G -->|Read/Write| H
+  G -->|Read/Write| I
+  G -->|InvokeModel| J
+  G -->|Recommendations/Search| K
+  K -. uses creds .-> L
 
-	%% Notes
-	classDef ext fill:#eef,stroke:#88a,stroke-width:1px;
-	class J,K,L ext;
+  %% Notes
+  classDef ext fill:#eef,stroke:#88a,stroke-width:1px;
+  class J,K,L ext;
 ```
 
 ## Folder structure
