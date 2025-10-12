@@ -16,68 +16,24 @@ See detailed deployment/setup steps at the bottom of this file.
 
 ```mermaid
 flowchart TD
-  subgraph Client
-    A[User]
-    B[Frontend (React/Next.js)]
-  end
+  User[User] --> Frontend[Frontend (React/Next.js)]
+  Frontend -->|Sign-up/Sign-in| Cognito[(Cognito User Pool)]
+  Cognito --> AppClient[Cognito App Client]
 
-  subgraph Auth
-    C[Cognito User Pool]
-    Cc[Cognito App Client]
-  end
+  Frontend -->|REST (CORS)| APIGW[API Gateway HTTP API]
+  APIGW --> API[Lambda: FastAPI (Mangum)]
 
-  subgraph API
-    D[API Gateway HTTP API]
-    E[Lambda: FastAPI (Mangum)]
-  end
+  API -->|SendMessage| Queue[SQS playlist-requests]
+  API -->|Read| Table[(DynamoDB Playlists Table)]
 
-  subgraph Async
-    F[SQS Queue: playlist-requests]
-    M[DLQ]
-  end
+  Queue --> Worker[Lambda Worker (SQS Consumer)]
+  Queue --> DLQ[DLQ]
 
-  subgraph Compute
-    G[Lambda Worker (SQS Consumer)]
-  end
-
-  subgraph Data
-    H[(DynamoDB Playlists Table)]
-    I[S3 Bucket: Data and Generated Audio]
-  end
-
-  subgraph External Services
-    J[Amazon Bedrock: Model Inference]
-    K[Spotify Web API]
-    L[[Secrets Manager: Spotify Credentials]]
-  end
-
-  %% Client/Auth
-  A --> B
-  B -->|Sign-up/Sign-in| C
-  C --> Cc
-
-  %% Client/API
-  B -->|REST (CORS)| D
-  D --> E
-
-  %% API -> Async + DB
-  E -->|SendMessage| F
-  E -->|Read| H
-
-  %% Queue -> Worker
-  F -->|Event Source| G
-  F --> M
-
-  %% Worker -> Data & Services
-  G -->|Read/Write| H
-  G -->|Read/Write| I
-  G -->|InvokeModel| J
-  G -->|Recommendations/Search| K
-  K -. uses creds .-> L
-
-  %% Notes
-  classDef ext fill:#eef,stroke:#88a,stroke-width:1px;
-  class J,K,L ext;
+  Worker -->|Read/Write| Table
+  Worker -->|Read/Write| Bucket[S3 Data/Generated Audio]
+  Worker -->|InvokeModel| Bedrock[Amazon Bedrock]
+  Worker -->|Search| Spotify[Spotify Web API]
+  Spotify -. uses creds .-> Secret[[Secrets Manager: Spotify Credentials]]
 ```
 
 ## Folder structure
