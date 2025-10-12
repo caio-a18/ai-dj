@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+import json
+import os
+import time
+from typing import Any, Dict, List
+
+from fastapi import FastAPI, HTTPException
+from mangum import Mangum
+import boto3
+
+TABLE_NAME = os.environ.get("TABLE_NAME", "")
+QUEUE_URL = os.environ.get("QUEUE_URL", "")
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*")
+
+dynamodb = boto3.resource("dynamodb")
+sqs = boto3.client("sqs")
+table = dynamodb.Table(TABLE_NAME) if TABLE_NAME else None
+
+app = FastAPI(title="AI-DJ API", version="0.1.0")
+
+
+@app.get("/health")
+def health() -> Dict[str, Any]:
+    return {"status": "ok", "time": int(time.time())}
+
+
+@app.post("/playlists/request")
+def request_playlist(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Body example:
+    {
+      "prompt": "songs like 'Blinding Lights'",
+      "user_id": "uuid-123",
+      "count": 20
+    }
+    """
+    prompt = payload.get("prompt")
+    user_id = payload.get("user_id")
+    count = int(payload.get("count") or 20)
+    if not prompt or not user_id:
+        raise HTTPException(status_code=400, detail="prompt and user_id are required")
+    if not QUEUE_URL:
+        raise HTTPException(status_code=500, detail="QUEUE_URL not configured")
+
+    message = {
+        "type": "playlist_request",
+        "prompt": prompt,
+        "user_id": user_id,
+        "count": count,
+    }
+    sqs.send_message(QueueUrl=QUEUE_URL, MessageBody=json.dumps(message))
+    return {"status": "queued"}
+
+
+@app.get("/playlists/{playlist_id}")
+def get_playlist(playlist_id: str) -> Dict[str, Any]:
+    if not table:
+        raise HTTPException(status_code=500, detail="TABLE_NAME not configured")
+    resp = table.get_item(Key={"playlist_id": playlist_id})
+    item = resp.get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="playlist not found")
+    return item
+
+
+handler = Mangum(app)

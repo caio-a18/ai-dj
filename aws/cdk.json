@@ -1,0 +1,9 @@
+{
+  "app": "python app.py",
+  "context": {
+    "@aws-cdk/core:bootstrapQualifier": "aijdj",
+    "@aws-cdk/aws-lambda:recognizeVersionProps": true,
+    "@aws-cdk/aws-s3:grantWriteWithoutAcl": true,
+    "@aws-cdk/aws-apigateway:disableCloudWatchRole": true
+  }
+}
