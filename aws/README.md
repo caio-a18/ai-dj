@@ -16,24 +16,25 @@ See detailed deployment/setup steps at the bottom of this file.
 
 ```mermaid
 flowchart TD
-  User[User] --> Frontend[Frontend (React/Next.js)]
-  Frontend -->|Sign-up/Sign-in| Cognito[(Cognito User Pool)]
-  Cognito --> AppClient[Cognito App Client]
+	user --> frontend
+	frontend -->|sign in| cognito
+	cognito --> appclient
 
-  Frontend -->|REST (CORS)| APIGW[API Gateway HTTP API]
-  APIGW --> API[Lambda: FastAPI (Mangum)]
+	frontend -->|REST| apigw
+	apigw --> api
 
-  API -->|SendMessage| Queue[SQS playlist-requests]
-  API -->|Read| Table[(DynamoDB Playlists Table)]
+	api -->|send| queue
+	api -->|read| table
 
-  Queue --> Worker[Lambda Worker (SQS Consumer)]
-  Queue --> DLQ[DLQ]
+	queue --> worker
+	queue --> dlq
 
-  Worker -->|Read/Write| Table
-  Worker -->|Read/Write| Bucket[S3 Data/Generated Audio]
-  Worker -->|InvokeModel| Bedrock[Amazon Bedrock]
-  Worker -->|Search| Spotify[Spotify Web API]
-  Spotify -. uses creds .-> Secret[[Secrets Manager: Spotify Credentials]]
+	worker --> table
+	worker --> bucket
+	worker --> bedrock
+	worker --> spotify
+	spotify -.-> secret
+```
 ```
 
 ## Folder structure
