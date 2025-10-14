@@ -1,0 +1,88 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.app {
+  position: relative;
+  min-height: 100vh;
+}
+
+.top-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 20px;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  justify-self: center;
+}
+
+.menu-button {
+  justify-self: start;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 10px;
+}
+
+.menu-button:hover {
+  text-decoration: underline;
+}
+
+.promptbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0
+}
+
+.logo {
+  height: 6em;
+  width: auto;
+}
+
+.input-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 100px;
+}
+
+.text-input {
+  padding: 12px;
+  width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.create-playlist-btn {
+  padding: 12px 24px;
+  background-color: #570b52;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.create-playlist-btn:hover {
+  background-color: #be950e;
+}
