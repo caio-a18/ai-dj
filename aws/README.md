@@ -8,7 +8,7 @@ Components (Phase 1):
 - SQS queue (+ DLQ) for async processing
 - Cognito User Pool and App Client for auth
 - API Gateway + Lambda (FastAPI) for REST endpoints
-- Worker Lambda subscribed to SQS for Bedrock+Spotify orchestration (placeholder)
+- Worker Lambda subscribed to SQS for Spotify orchestration (placeholder)
 
 See detailed deployment/setup steps at the bottom of this file.
 
@@ -31,7 +31,6 @@ flowchart TD
 
 	worker --> table
 	worker --> bucket
-	worker --> bedrock
 	worker --> spotify
 	spotify -.-> secret
 ```
@@ -49,7 +48,6 @@ sequenceDiagram
 	participant W as Worker Lambda
 	participant D as DynamoDB
 	participant B as S3
-	participant R as Bedrock
 	participant S as Spotify
 	participant X as Secrets Manager
 
@@ -95,13 +93,11 @@ aws/
 - AWS account with access keys configured locally
 - Node.js (for AWS CDK CLI) and Python 3.11
 - AWS CDK v2 (npm i -g aws-cdk)
-- Permissions to enable Amazon Bedrock access in your account/region (console)
 
 ## Required AWS setup and keys
 
-1) IAM user/role with permissions to deploy CDK and manage used services: CloudFormation, IAM, Lambda, APIGWv2, SQS, DynamoDB, S3, Cognito, Secrets Manager, Bedrock Invoke.
-2) Enable Amazon Bedrock access to the foundation models you will use (console > Bedrock > Model access). For now, we only grant generic Invoke permissions; narrow later.
-3) Optional: Create a Secrets Manager secret to store Spotify API credentials. Format suggestion (JSON):
+1) IAM user/role with permissions to deploy CDK and manage used services: CloudFormation, IAM, Lambda, APIGWv2, SQS, DynamoDB, S3, Cognito, Secrets Manager,
+2) Optional: Create a Secrets Manager secret to store Spotify API credentials. Format suggestion (JSON):
 	 {
 		 "spotify_client_id": "...",
 		 "spotify_client_secret": "...",
@@ -112,7 +108,6 @@ aws/
 Environment/config values you will need/provide:
 - AWS Account ID and target Region
 - allowedOrigins: frontend origins for CORS (default includes localhost:3000 and *.vercel.app)
-- bedrockRegion: usually same as your stack region
 - spotifySecretArn: Secrets Manager ARN (optional for now; placeholder logic doesn’t require it)
 
 ## Deploy
@@ -126,8 +121,7 @@ Environment/config values you will need/provide:
 
 3) Synthesize and deploy
 	 cdk synth
-	 cdk deploy \
-		 -c bedrockRegion=<REGION> \
+     cdk deploy \
 		 -c allowedOrigins='["http://localhost:3000","https://*.vercel.app"]' \
 		 -c spotifySecretArn=<optional-secret-arn>
 
@@ -147,7 +141,7 @@ Outputs will include:
 
 ## Next steps (Phase 2+)
 
-- Replace placeholder worker logic with Bedrock+LangChain orchestration and Spotify Web API integration.
+- Replace placeholder worker logic with LangChain orchestration and Spotify Web API integration.
 - Add Cognito authorizers for protected routes.
 - Add CloudWatch dashboards/alarms.
 - Optionally split stacks (networking, data, compute) and add stages (dev/prod).

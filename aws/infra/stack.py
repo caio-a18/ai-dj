@@ -42,8 +42,7 @@ class AiDjStack(Stack):
         *,
         env: Optional[Environment] = None,
         spotify_secret_arn: Optional[str] = None,
-        allowed_origins: Optional[list[str]] = None,
-        bedrock_region: Optional[str] = None,
+    allowed_origins: Optional[list[str]] = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, env=env, **kwargs)
@@ -55,7 +54,7 @@ class AiDjStack(Stack):
             "https://localhost:3000",
             "https://*.vercel.app",
         ]
-        bedrock_region = bedrock_region or (env.region if env else "us-east-1")
+    # No Bedrock usage in this demo
 
         # DynamoDB: Playlists table
         table = dynamodb.Table(
@@ -113,7 +112,6 @@ class AiDjStack(Stack):
             "BUCKET_NAME": bucket.bucket_name,
             "QUEUE_URL": queue.queue_url,
             "ALLOWED_ORIGINS": ",".join(allowed_origins),
-            "BEDROCK_REGION": bedrock_region,
         }
         if spotify_secret_arn:
             api_env["SPOTIFY_SECRET_ARN"] = spotify_secret_arn
@@ -151,7 +149,6 @@ class AiDjStack(Stack):
         worker_env = {
             "TABLE_NAME": table.table_name,
             "BUCKET_NAME": bucket.bucket_name,
-            "BEDROCK_REGION": bedrock_region,
         }
         if spotify_secret_arn:
             worker_env["SPOTIFY_SECRET_ARN"] = spotify_secret_arn
@@ -185,16 +182,7 @@ class AiDjStack(Stack):
         if secret is not None:
             secret.grant_read(worker_fn)
 
-        # Allow worker to call Bedrock (placeholder permissions)
-        worker_fn.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "bedrock:InvokeModel",
-                    "bedrock:InvokeModelWithResponseStream",
-                ],
-                resources=["*"],  # Narrow to required models as you adopt Bedrock
-            )
-        )
+        # No Bedrock permissions required
 
         # Event source mapping for SQS
         worker_fn.add_event_source(lambda_events.SqsEventSource(queue, batch_size=5))

@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-import os
 import re
 from typing import Tuple
-
-import boto3
-
-# Bedrock client
-BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
 
 # Naive parse: extract quoted song if present; fallback to whole prompt; count default=20.
 def extract_base_query(prompt: str) -> Tuple[str, int]:
@@ -25,6 +19,6 @@ def extract_base_query(prompt: str) -> Tuple[str, int]:
         base = prompt if not parts else " ".join(prompt.split()[-5:])
     return base.strip(), count
 
-# Placeholder for future Bedrock-powered parsing
-def bedrock_enhance_query(prompt: str) -> Tuple[str, int]:
+# Simple enhancement hook (can be upgraded later)
+def enhance_query(prompt: str) -> Tuple[str, int]:
     return extract_base_query(prompt)

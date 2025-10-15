@@ -10,7 +10,12 @@ import requests
 
 # Spotify API credentials from Secrets Manager
 _secrets_arn = os.environ.get("SPOTIFY_SECRET_ARN")
-_sm = boto3.client("secretsmanager")
+_AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
+_AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
+if _AWS_ENDPOINT_URL:
+    _sm = boto3.client("secretsmanager", endpoint_url=_AWS_ENDPOINT_URL, region_name=_AWS_REGION)
+else:
+    _sm = boto3.client("secretsmanager", region_name=_AWS_REGION)
 
 # Simple client credentials flow for server-to-server auth
 def _get_spotify_creds() -> Dict[str, str]:

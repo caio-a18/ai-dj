@@ -5,21 +5,34 @@ import os
 import time
 import uuid
 from typing import Any, Dict, List
+from decimal import Decimal
 
 import boto3
-from . import spotify as spotify_client  # type: ignore
-from . import nlp
+try:
+    # When imported as part of a package
+    from . import spotify as spotify_client  # type: ignore
+    from . import nlp  # type: ignore
+except Exception:
+    # When imported as a top-level module (e.g., moto demo)
+    import spotify as spotify_client  # type: ignore
+    import nlp  # type: ignore
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "")
 BUCKET_NAME = os.environ.get("BUCKET_NAME", "")
-BEDROCK_REGION = os.environ.get("BEDROCK_REGION", "us-east-1")
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
+AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
 
-dynamodb = boto3.resource("dynamodb")
+if AWS_ENDPOINT_URL:
+    dynamodb = boto3.resource("dynamodb", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
+    s3 = boto3.client("s3", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
+else:
+    dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+    s3 = boto3.client("s3", region_name=AWS_REGION)
+
 table = dynamodb.Table(TABLE_NAME) if TABLE_NAME else None
-s3 = boto3.client("s3")
 
-# Placeholder for future Bedrock-powered parsing if needed
-def _placeholder_bedrock_and_spotify(prompt: str, count: int) -> List[Dict[str, Any]]:
+# Placeholder for future AI + Spotify orchestration
+def _placeholder_generate_songs(prompt: str, count: int) -> List[Dict[str, Any]]:
     """Placeholder logic that simulates AI + Spotify recommendation results."""
     results = []
     for i in range(count):
@@ -28,7 +41,8 @@ def _placeholder_bedrock_and_spotify(prompt: str, count: int) -> List[Dict[str, 
                 "title": f"Mock Song {i+1}",
                 "artist": "Mock Artist",
                 "source": "spotify",
-                "score": 0.5,
+                # Use Decimal for DynamoDB numeric compatibility
+                "score": Decimal("0.5"),
             }
         )
     return results
@@ -46,20 +60,23 @@ def lambda_handler(event, context):
             prompt = body.get("prompt")
             user_id = body.get("user_id")
             # Try to derive count/base from prompt if not provided
-            base, derived_count = nlp.bedrock_enhance_query(prompt or "")
+            base, derived_count = nlp.enhance_query(prompt or "")
             count = int(body.get("count") or derived_count or 20)
             playlist_id = str(uuid.uuid4())
 
             # If Secrets Manager ARN is set, try real Spotify search for base; then fill with mocks
             songs: List[Dict[str, Any]] = []
             try:
-                if os.environ.get("SPOTIFY_SECRET_ARN") and base:
+                offline = os.environ.get("SPOTIFY_OFFLINE") == "1"
+                if not offline and os.environ.get("SPOTIFY_SECRET_ARN") and base:
                     seeds = spotify_client.search_track(base)
                     songs.extend(seeds[: min(len(seeds), count)])
+                elif offline:
+                    print("Spotify offline mode: skipping network calls")
             except Exception as e:
                 print(f"Spotify lookup failed, fallback to mock: {e}")
             if len(songs) < count:
-                songs.extend(_placeholder_bedrock_and_spotify(prompt or base, count - len(songs)))
+                songs.extend(_placeholder_generate_songs(prompt or base, count - len(songs)))
 
             item = {
                 "playlist_id": playlist_id,
