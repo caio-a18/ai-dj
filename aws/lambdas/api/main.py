@@ -15,12 +15,20 @@ import requests
 TABLE_NAME = os.environ.get("TABLE_NAME", "")
 QUEUE_URL = os.environ.get("QUEUE_URL", "")
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "*")
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")  # e.g., http://localhost:4566 for LocalStack
+AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
 
-# AWS clients
-dynamodb = boto3.resource("dynamodb")
-sqs = boto3.client("sqs")
+# AWS clients (local-friendly)
+if AWS_ENDPOINT_URL:
+    dynamodb = boto3.resource("dynamodb", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
+    sqs = boto3.client("sqs", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
+    secrets = boto3.client("secretsmanager", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
+else:
+    dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+    sqs = boto3.client("sqs", region_name=AWS_REGION)
+    secrets = boto3.client("secretsmanager", region_name=AWS_REGION)
+
 table = dynamodb.Table(TABLE_NAME) if TABLE_NAME else None
-secrets = boto3.client("secretsmanager")
 # FastAPI app
 app = FastAPI(title="AI-DJ API", version="0.1.0")
 
