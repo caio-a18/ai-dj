@@ -1,35 +1,43 @@
-import m4uLogo from '/M4U_logo.png'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState } from 'react';
+import LoginSignup from './Pages/LoginSignup';
+import HomePage from './Pages/HomePage';
+import PlaylistPage from './Pages/PlaylistPage';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   return (
-    <div className='app'>
-      <div className='top-bar'>
-        <button className="menu-button">
-          Menu
-        </button>
-        <div className='header'>
-          <h1>Music 4 You</h1>
-          <img src={m4uLogo} className='logo' alt='M4U logo' />
-        </div>
-      </div>
-      <div className="input-section">
-        <input 
-          type="text" 
-          placeholder="Enter playlist name"
-          className="text-input"
+    <Router>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            <LoginSignup 
+              setIsAuthenticated={setIsAuthenticated} 
+            />
+          } 
         />
-        <input 
-          type="text" 
-          placeholder="Songs like..."
-          className="text-input"
+        <Route 
+          path="/home" 
+          element={
+            isAuthenticated ? 
+            <HomePage setIsAuthenticated={setIsAuthenticated} /> : 
+            <Navigate to="/login" />
+          } 
         />
-        <button className="create-playlist-btn">
-          Create Playlist
-        </button>
-      </div>
-    </div>
-  )
+        <Route 
+          path="/playlists" 
+          element={
+            isAuthenticated ? 
+            <PlaylistPage setIsAuthenticated={setIsAuthenticated} /> : 
+            <Navigate to="/login" />
+          } 
+        />
+        <Route path="/" element={<Navigate to="/login" />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;
