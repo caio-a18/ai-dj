@@ -147,6 +147,8 @@ class AiDjStack(Stack):
 
         table.grant_read_write_data(api_fn)
         queue.grant_send_messages(api_fn)
+        # API lambda reads playlist data from S3 (GET /playlists/{id}/data)
+        bucket.grant_read(api_fn)
         if secret is not None:
             secret.grant_read(api_fn)
 
