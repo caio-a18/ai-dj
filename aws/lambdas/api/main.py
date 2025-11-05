@@ -23,10 +23,12 @@ if AWS_ENDPOINT_URL:
     dynamodb = boto3.resource("dynamodb", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
     sqs = boto3.client("sqs", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
     secrets = boto3.client("secretsmanager", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
+    s3 = boto3.client("s3", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
 else:
     dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
     sqs = boto3.client("sqs", region_name=AWS_REGION)
     secrets = boto3.client("secretsmanager", region_name=AWS_REGION)
+    s3 = boto3.client("s3", region_name=AWS_REGION)
 
 table = dynamodb.Table(TABLE_NAME) if TABLE_NAME else None
 # FastAPI app
@@ -137,6 +139,38 @@ def get_playlist(playlist_id: str) -> Dict[str, Any]:
     if not item:
         raise HTTPException(status_code=404, detail="playlist not found")
     return item
+
+# Get playlist data from S3 if available
+@app.get("/playlists/{playlist_id}/data")
+def get_playlist_data(playlist_id: str) -> Dict[str, Any]:
+    if not table:
+        raise HTTPException(status_code=500, detail="TABLE_NAME not configured")
+    # Look up the item to find s3_key (or fallback to inline songs)
+    resp = table.get_item(Key={"playlist_id": playlist_id})
+    item = resp.get("Item")
+    if not item:
+        raise HTTPException(status_code=404, detail="playlist not found")
+    s3_key = item.get("s3_key")
+    bucket_name = os.environ.get("BUCKET_NAME")
+    if s3_key and bucket_name:
+        try:
+            obj = s3.get_object(Bucket=bucket_name, Key=s3_key)
+            data = obj["Body"].read()
+            return json.loads(data)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"failed to load S3 object: {e}")
+    # Fallback: return the DynamoDB item if songs are stored inline
+    if "songs" in item:
+        return {
+            "playlist_id": playlist_id,
+            "metadata": {
+                "user_id": item.get("user_id"),
+                "prompt": item.get("prompt"),
+                "created_at": int(item.get("created_at", 0)),
+            },
+            "songs": item.get("songs", []),
+        }
+    raise HTTPException(status_code=404, detail="playlist data not found")
 
 # Lambda handler
 handler = Mangum(app)

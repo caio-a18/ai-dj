@@ -42,7 +42,8 @@ class AiDjStack(Stack):
         *,
         env: Optional[Environment] = None,
         spotify_secret_arn: Optional[str] = None,
-    allowed_origins: Optional[list[str]] = None,
+        allowed_origins: Optional[list[str]] = None,
+        data_bucket_name: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, env=env, **kwargs)
@@ -73,16 +74,20 @@ class AiDjStack(Stack):
         )
 
         # S3: Data bucket
-        bucket = s3.Bucket(
-            self,
-            "DataBucket",
-            bucket_name=f"aijdj-data-{self.account}-{self.region}",
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-            enforce_ssl=True,
-            versioned=True,
-            removal_policy=RemovalPolicy.DESTROY,
-            auto_delete_objects=True,
-        )
+        if data_bucket_name:
+            # Use an existing bucket by name (settings are managed outside CDK)
+            bucket = s3.Bucket.from_bucket_name(self, "DataBucketImported", data_bucket_name)
+        else:
+            bucket = s3.Bucket(
+                self,
+                "DataBucket",
+                bucket_name=f"aijdj-data-{self.account}-{self.region}",
+                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+                enforce_ssl=True,
+                versioned=True,
+                removal_policy=RemovalPolicy.DESTROY,
+                auto_delete_objects=True,
+            )
 
         # SQS: DLQ and main queue
         dlq = sqs.Queue(

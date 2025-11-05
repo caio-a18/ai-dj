@@ -3,8 +3,8 @@
 This folder contains the AWS infrastructure for MusicForYou - AI DJ Assistant, implemented with AWS CDK (Python).
 
 Components (Phase 1):
-- DynamoDB table for playlists
-- S3 bucket for datasets and generated audio
+- DynamoDB table for playlists (metadata + pointers)
+- S3 bucket for playlist payloads and datasets
 - SQS queue (+ DLQ) for async processing
 - Cognito User Pool and App Client for auth
 - API Gateway + Lambda (FastAPI) for REST endpoints
@@ -109,6 +109,7 @@ Environment/config values you will need/provide:
 - AWS Account ID and target Region
 - allowedOrigins: frontend origins for CORS (default includes localhost:3000 and *.vercel.app)
 - spotifySecretArn: Secrets Manager ARN (optional for now; placeholder logic doesn’t require it)
+ - dataBucketName: Existing S3 bucket name to use instead of creating one (optional). If omitted, the stack creates a bucket named aijdj-data-<account>-<region>.
 
 ## Deploy
 
@@ -125,6 +126,12 @@ Environment/config values you will need/provide:
 		 -c allowedOrigins='["http://localhost:3000","https://*.vercel.app"]' \
 		 -c spotifySecretArn=<optional-secret-arn>
 
+To use an existing S3 bucket instead of creating one:
+
+    cdk deploy -c dataBucketName=<your-existing-bucket-name>
+
+Note: When using an imported bucket, its settings (encryption, versioning, lifecycle) are managed outside CDK.
+
 Outputs will include:
 - HttpApiUrl
 - TableName
@@ -138,6 +145,35 @@ Outputs will include:
 - GET /health
 - POST /playlists/request  { prompt, user_id, count } -> { status: "queued" }
 - GET /playlists/{playlist_id}
+- GET /playlists/{playlist_id}/data  (returns full playlist JSON; served from S3 when available)
+
+## Data model
+
+- DynamoDB table: aijdj-playlists-<account>-<region>
+	- PK: playlist_id (string)
+	- GSI: by_user (user_id, created_at)
+	- Item shape (core fields):
+		- playlist_id: string
+		- user_id: string
+		- prompt: string
+		- status: string (e.g., ready)
+		- created_at: epoch seconds as string
+		- song_count: number (optional)
+		- s3_key: string (optional, when playlist is stored in S3)
+		- songs: array (kept for backward compatibility and tests; may be omitted for large payloads)
+
+- S3 bucket: aijdj-data-<account>-<region>
+	- Object layout:
+		- playlists/{playlist_id}.json
+			{
+				"playlist_id": "...",
+				"metadata": { "user_id": "...", "prompt": "...", "created_at": 1730750000 },
+				"songs": [ { "title": "...", "artist": "...", "score": 0.5 }, ... ]
+			}
+
+Notes:
+- Worker Lambda now writes the full playlist JSON to S3 and also records s3_key and song_count in DynamoDB.
+- The API's /playlists/{id}/data endpoint returns the S3 JSON when s3_key is present, falling back to inline DynamoDB data when not.
 
 ## Next steps (Phase 2+)
 
