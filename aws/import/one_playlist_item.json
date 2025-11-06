@@ -1,0 +1,31 @@
+{
+  "playlist_id": {"S": "00000000-0000-4000-8000-000000000001"},
+  "user_id": {"S": "demo-user"},
+  "prompt": {"S": "50 upbeat pop songs"},
+  "created_at": {"S": "1730850000"},
+  "status": {"S": "ready"},
+  "song_count": {"N": "3"},
+  "songs": {"L": [
+    {"M": {
+      "title": {"S": "Blinding Lights"},
+      "artist": {"S": "The Weeknd"},
+      "url": {"S": "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b"},
+      "duration_ms": {"N": "200040"},
+      "score": {"N": "0.95"}
+    }},
+    {"M": {
+      "title": {"S": "Levitating"},
+      "artist": {"S": "Dua Lipa"},
+      "url": {"S": "https://open.spotify.com/track/463CkQjx2Zk1yXoBuierM9"},
+      "duration_ms": {"N": "203064"},
+      "score": {"N": "0.91"}
+    }},
+    {"M": {
+      "title": {"S": "Don't Start Now"},
+      "artist": {"S": "Dua Lipa"},
+      "url": {"S": "https://open.spotify.com/track/3PfIrDoz19wz7qK7tYeu62"},
+      "duration_ms": {"N": "183290"},
+      "score": {"N": "0.9"}
+    }}
+  ]}
+}
