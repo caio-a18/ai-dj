@@ -5,21 +5,25 @@ from infra.stack import AiDjStack
 
 app = cdk.App()
 
+# Environment settings
 account = os.environ.get("CDK_DEFAULT_ACCOUNT")
-region = os.environ.get("CDK_DEFAULT_REGION", "us-east-1")
+region = os.environ.get("CDK_DEFAULT_REGION", "us-east-2")
 
-# Optional context params, pass via `-c key=value` or cdk.json context
+# Context variables
 spotify_secret_arn = app.node.try_get_context("spotifySecretArn")
 allowed_origins = app.node.try_get_context("allowedOrigins") or None
-data_bucket_name = app.node.try_get_context("dataBucketName") or None
+playlists_table_name = app.node.try_get_context("playlistsTableName") or None
+datasets_table_name = app.node.try_get_context("datasetsTableName") or None
 
+# Create the stack
 AiDjStack(
 	app,
 	"AiDjStack",
 	env=cdk.Environment(account=account, region=region),
 	spotify_secret_arn=spotify_secret_arn,
 	allowed_origins=allowed_origins,
-    data_bucket_name=data_bucket_name,
+    playlists_table_name=playlists_table_name,
+    datasets_table_name=datasets_table_name,
 )
 
 app.synth()

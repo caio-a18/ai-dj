@@ -18,16 +18,14 @@ except Exception:
     import nlp  # type: ignore
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "")
-BUCKET_NAME = os.environ.get("BUCKET_NAME", "")
+DATASETS_TABLE_NAME = os.environ.get("DATASETS_TABLE_NAME", "")
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
 AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
 
 if AWS_ENDPOINT_URL:
     dynamodb = boto3.resource("dynamodb", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
-    s3 = boto3.client("s3", endpoint_url=AWS_ENDPOINT_URL, region_name=AWS_REGION)
 else:
     dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
-    s3 = boto3.client("s3", region_name=AWS_REGION)
 
 table = dynamodb.Table(TABLE_NAME) if TABLE_NAME else None
 
@@ -88,35 +86,10 @@ def lambda_handler(event, context):
                 "user_id": user_id,
                 "prompt": prompt,
                 "songs": songs,
+                "song_count": len(songs),
                 "created_at": str(int(time.time())),
                 "status": "ready",
             }
-            # Persist full playlist payload to S3 as well (durable, large payload friendly)
-            if BUCKET_NAME:
-                s3_key = f"playlists/{playlist_id}.json"
-                try:
-                    s3.put_object(
-                        Bucket=BUCKET_NAME,
-                        Key=s3_key,
-                        Body=json.dumps(
-                            {
-                                "playlist_id": playlist_id,
-                                "metadata": {
-                                    "user_id": user_id,
-                                    "prompt": prompt,
-                                    "created_at": int(time.time()),
-                                },
-                                "songs": songs,
-                            },
-                            default=_to_json_safe,
-                        ).encode("utf-8"),
-                        ContentType="application/json",
-                    )
-                    item["s3_key"] = s3_key
-                    item["song_count"] = len(songs)
-                except Exception as e:
-                    # Log but don't fail the whole message; DynamoDB item still written
-                    print(f"Failed to write playlist to S3: {e}")
             table.put_item(Item=item)
         except Exception as e:
             # Log and continue; failed messages will be retried then sent to DLQ

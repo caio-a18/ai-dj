@@ -11,7 +11,6 @@ from aws_cdk import (
     Environment,
     RemovalPolicy,
     aws_dynamodb as dynamodb,
-    aws_s3 as s3,
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_lambda_event_sources as lambda_events,
@@ -33,7 +32,7 @@ try:
 except Exception:
     lambda_python = None  # type: ignore
 
-
+# Main stack
 class AiDjStack(Stack):
     def __init__(
         self,
@@ -43,7 +42,8 @@ class AiDjStack(Stack):
         env: Optional[Environment] = None,
         spotify_secret_arn: Optional[str] = None,
         allowed_origins: Optional[list[str]] = None,
-        data_bucket_name: Optional[str] = None,
+        playlists_table_name: Optional[str] = None,
+        datasets_table_name: Optional[str] = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, env=env, **kwargs)
@@ -57,36 +57,41 @@ class AiDjStack(Stack):
         ]
     # No Bedrock usage in this demo
 
-        # DynamoDB: Playlists table
-        table = dynamodb.Table(
-            self,
-            "PlaylistsTable",
-            table_name=f"aijdj-playlists-{self.account}-{self.region}",
-            partition_key=dynamodb.Attribute(name="playlist_id", type=dynamodb.AttributeType.STRING),
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
-            removal_policy=RemovalPolicy.DESTROY,
-        )
-
-        table.add_global_secondary_index(
-            index_name="by_user",
-            partition_key=dynamodb.Attribute(name="user_id", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
-        )
-
-        # S3: Data bucket
-        if data_bucket_name:
-            # Use an existing bucket by name (settings are managed outside CDK)
-            bucket = s3.Bucket.from_bucket_name(self, "DataBucketImported", data_bucket_name)
-        else:
-            bucket = s3.Bucket(
+        # DynamoDB: Playlists table (import existing by name if provided)
+        if playlists_table_name:
+            table = dynamodb.Table.from_table_name(
                 self,
-                "DataBucket",
-                bucket_name=f"aijdj-data-{self.account}-{self.region}",
-                block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-                enforce_ssl=True,
-                versioned=True,
+                "PlaylistsTableImported",
+                playlists_table_name,
+            )
+        else:
+            table = dynamodb.Table(
+                self,
+                "PlaylistsTable",
+                table_name=f"aijdj-playlists-{self.account}-{self.region}",
+                partition_key=dynamodb.Attribute(name="playlist_id", type=dynamodb.AttributeType.STRING),
+                billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
                 removal_policy=RemovalPolicy.DESTROY,
-                auto_delete_objects=True,
+            )
+            table.add_global_secondary_index(
+                index_name="by_user",
+                partition_key=dynamodb.Attribute(name="user_id", type=dynamodb.AttributeType.STRING),
+                sort_key=dynamodb.Attribute(name="created_at", type=dynamodb.AttributeType.STRING),
+            )
+
+        # DynamoDB: Datasets table (song catalog), import if provided else create
+        if datasets_table_name:
+            datasets_table = dynamodb.Table.from_table_name(
+                self, "DatasetsTableImported", datasets_table_name
+            )
+        else:
+            datasets_table = dynamodb.Table(
+                self,
+                "DatasetsTable",
+                table_name=f"aijdj-datasets-{self.account}-{self.region}",
+                partition_key=dynamodb.Attribute(name="song_id", type=dynamodb.AttributeType.STRING),
+                billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+                removal_policy=RemovalPolicy.DESTROY,
             )
 
         # SQS: DLQ and main queue
@@ -114,7 +119,7 @@ class AiDjStack(Stack):
         # Lambda: API (FastAPI via Mangum)
         api_env = {
             "TABLE_NAME": table.table_name,
-            "BUCKET_NAME": bucket.bucket_name,
+            "DATASETS_TABLE_NAME": datasets_table.table_name,
             "QUEUE_URL": queue.queue_url,
             "ALLOWED_ORIGINS": ",".join(allowed_origins),
         }
@@ -146,16 +151,15 @@ class AiDjStack(Stack):
             )
 
         table.grant_read_write_data(api_fn)
+        datasets_table.grant_read_data(api_fn)
         queue.grant_send_messages(api_fn)
-        # API lambda reads playlist data from S3 (GET /playlists/{id}/data)
-        bucket.grant_read(api_fn)
         if secret is not None:
             secret.grant_read(api_fn)
 
         # Lambda: Worker (SQS consumer)
         worker_env = {
             "TABLE_NAME": table.table_name,
-            "BUCKET_NAME": bucket.bucket_name,
+            "DATASETS_TABLE_NAME": datasets_table.table_name,
         }
         if spotify_secret_arn:
             worker_env["SPOTIFY_SECRET_ARN"] = spotify_secret_arn
@@ -185,7 +189,7 @@ class AiDjStack(Stack):
             )
 
         table.grant_read_write_data(worker_fn)
-        bucket.grant_read_write(worker_fn)
+        datasets_table.grant_read_data(worker_fn)
         if secret is not None:
             secret.grant_read(worker_fn)
 
@@ -260,8 +264,8 @@ class AiDjStack(Stack):
         # Note: Configure API auth at the route level later if needed
         # Outputs
         CfnOutput(self, "HttpApiUrl", value=http_api.api_endpoint)
-        CfnOutput(self, "TableName", value=table.table_name)
-        CfnOutput(self, "BucketName", value=bucket.bucket_name)
+        CfnOutput(self, "PlaylistsTableName", value=table.table_name)
+        CfnOutput(self, "DatasetsTableName", value=datasets_table.table_name)
         CfnOutput(self, "QueueUrl", value=queue.queue_url)
         CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id)
         CfnOutput(self, "UserPoolClientId", value=user_pool_client.user_pool_client_id)
