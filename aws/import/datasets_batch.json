@@ -1,0 +1,40 @@
+{
+  "aidj_datasets": [
+    {
+      "PutRequest": {
+        "Item": {
+          "song_id": {"S": "0VjIjW4GlUZAMYd2vXMi3b"},
+          "title": {"S": "Blinding Lights"},
+          "artist": {"S": "The Weeknd"},
+          "url": {"S": "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b"},
+          "duration_ms": {"N": "200040"},
+          "source": {"S": "spotify"}
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "song_id": {"S": "463CkQjx2Zk1yXoBuierM9"},
+          "title": {"S": "Levitating"},
+          "artist": {"S": "Dua Lipa"},
+          "url": {"S": "https://open.spotify.com/track/463CkQjx2Zk1yXoBuierM9"},
+          "duration_ms": {"N": "203064"},
+          "source": {"S": "spotify"}
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "song_id": {"S": "3PfIrDoz19wz7qK7tYeu62"},
+          "title": {"S": "Don't Start Now"},
+          "artist": {"S": "Dua Lipa"},
+          "url": {"S": "https://open.spotify.com/track/3PfIrDoz19wz7qK7tYeu62"},
+          "duration_ms": {"N": "183290"},
+          "source": {"S": "spotify"}
+        }
+      }
+    }
+  ]
+}
