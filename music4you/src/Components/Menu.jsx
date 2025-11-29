@@ -1,11 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Menu.css';
+import { CognitoService } from "../services/cognitoService"
 
 const Menu = ({ setIsAuthenticated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [closeTimeout, setCloseTimeout] = useState(null);
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    const result = await CognitoService.signOut();
+    if (result.success) {
+      setIsAuthenticated(false);
+      navigate('/login');
+    } else {
+      console.error("Sign out error: ", result.error);
+    }
+  };
 
   const handleMouseEnter = () => {
     if (closeTimeout) {
@@ -33,10 +44,7 @@ const Menu = ({ setIsAuthenticated }) => {
         navigate('/playlists');
         break;
       case 'Sign out':
-        if (setIsAuthenticated) {
-          setIsAuthenticated(false);
-        }
-        navigate('/login');
+        handleSignOut();
         break;
       default:
         break;
@@ -74,7 +82,7 @@ const Menu = ({ setIsAuthenticated }) => {
           </div>
           <div 
             className="menu-item"
-            onClick={() => handleMenuClick('Sign out')}
+            onClick={() => handleMenuClick('Sign Out')}
           >
             Sign out
           </div>
