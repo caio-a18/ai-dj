@@ -54,46 +54,33 @@
   border-radius: 6px;
   border: 2px solid #444;
   transition: border-color 0.3s ease;
+  position: relative;
 }
 
 .input:focus-within {
-  border-color: #8b5cf6;
+  border-color: #cbc4dc;
 }
 
-.input img {
+.input img:first-child {
   margin: 0px 30px;
   filter: invert(0.8);
+  flex-shrink: 0; /* Prevent icon from affecting layout */
 }
 
 .input input {
   height: 50px;
-  width: 400px;
+  width: 100%; /* Changed from 400px to 100% */
   background: transparent;
   border: none;
   outline: none;
   color: rgba(255, 255, 255, 0.87);
   font-size: 19px;
+  padding: 0 20px; /* Consistent padding */
+  flex: 1; /* Take up remaining space */
 }
 
 .input input::placeholder {
   color: rgba(255, 255, 255, 0.6);
-}
-
-.forgot-password {
-  padding-left: 62px;
-  margin-top: 27px;
-  color: #8b5cf6;
-  font-size: 18px;
-}
-
-.forgot-password span {
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.forgot-password span:hover {
-  color: rgba(255, 255, 255, 0.87);
 }
 
 .submit-container {
@@ -136,6 +123,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  margin-bottom: 15px;
 }
 
 .error-message {
@@ -151,4 +140,19 @@
 
 .submit:not(.gray):hover {
   background: #10b981;
+}
+
+.eye-icon {
+  position: absolute;
+  right: 30px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+
+.eye-icon:hover {
+  opacity: 1;
 }

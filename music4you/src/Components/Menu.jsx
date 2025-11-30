@@ -10,6 +10,7 @@ const Menu = ({ setIsAuthenticated }) => {
 
   const handleSignOut = async () => {
     const result = await CognitoService.signOut();
+    
     if (result.success) {
       setIsAuthenticated(false);
       navigate('/login');
@@ -70,21 +71,27 @@ const Menu = ({ setIsAuthenticated }) => {
         <div className="menu-dropdown">
           <div 
             className="menu-item" 
-            onClick={() => handleMenuClick('Home')}
+            onClick={() => {
+              handleMenuClick('Home');
+            }}
           >
             Home
           </div>
           <div 
             className="menu-item"
-            onClick={() => handleMenuClick('My Playlists')}
+            onClick={() => {
+              handleMenuClick('My Playlists');
+            }}
           >
             My Playlists
           </div>
           <div 
             className="menu-item"
-            onClick={() => handleMenuClick('Sign Out')}
+            onClick={() => {
+              handleMenuClick('Sign out');
+            }}
           >
-            Sign out
+            Sign Out
           </div>
         </div>
       )}

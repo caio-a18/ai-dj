@@ -2,6 +2,8 @@ import m4uLogo from "../Components/assets/M4U_Logo.png";
 import playlistPlaceholder from "../Components/assets/playlist-placeholder.jpg";
 import "../Styles/PlaylistPage.css";
 import Menu from "../Components/Menu";
+import UserDisplay from "../Components/UserDisplay";
+import SpotifyConnect from "../Components/SpotifyConnect";
 
 const PlaylistPage = ({ setIsAuthenticated }) => {
   // Temporary data - replace with actual data later
@@ -14,18 +16,12 @@ const PlaylistPage = ({ setIsAuthenticated }) => {
     { id: 6, name: "Morning Coffee" },
     { id: 7, name: "Late Night" },
     { id: 8, name: "Throwbacks" },
-    { id: 1, name: "Workout Mix" },
-    { id: 2, name: "Chill Vibes" },
-    { id: 3, name: "Road Trip" },
-    { id: 4, name: "Study Focus" },
-    { id: 5, name: "Party Hits" },
-    { id: 6, name: "Morning Coffee" },
-    { id: 7, name: "Late Night" },
-    { id: 8, name: "Throwbacks" },
   ];
 
   return (
     <div className="playlistpage-container">
+      <UserDisplay />
+      <SpotifyConnect />
       <Menu setIsAuthenticated={setIsAuthenticated} />
       <div className="header">
         <img src={m4uLogo} alt="M4U Logo" className="logo" />

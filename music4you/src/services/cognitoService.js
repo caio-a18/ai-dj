@@ -1,33 +1,69 @@
-import { CognitoUserPool, CognitoUser, AuthenticationDetails } from 'amazon-cognito-identity-js';
+import {
+  CognitoUserPool,
+  CognitoUser,
+  AuthenticationDetails,
+} from "amazon-cognito-identity-js";
 
-// Create user pool object
 const poolData = {
   UserPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
-  ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID
+  ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
 };
 
 const userPool = new CognitoUserPool(poolData);
 
 export class CognitoService {
-  // Sign up with email, password, and username
   static async signUp(username, email, password) {
     return new Promise((resolve) => {
       userPool.signUp(
-        email, // Use email as username
+        email,
         password,
         [
-          { Name: 'email', Value: email },
-          { Name: 'preferred_username', Value: username }
+          { Name: "email", Value: email },
+          { Name: "custom:username", Value: username },
         ],
         null,
         (err, result) => {
           if (err) {
             resolve({ success: false, error: err.message });
           } else {
-            resolve({ success: true, user: result.user });
+            resolve({
+              success: true,
+              user: result.user,
+            });
           }
         }
       );
+    });
+  }
+
+  static async getUserAttributes() {
+    return new Promise((resolve) => {
+      const cognitoUser = userPool.getCurrentUser();
+
+      if (!cognitoUser) {
+        resolve({ success: false, error: "No user found" });
+        return;
+      }
+
+      cognitoUser.getSession((err) => {
+        if (err) {
+          resolve({ success: false, error: err.message });
+          return;
+        }
+
+        cognitoUser.getUserAttributes((err, attributes) => {
+          if (err) {
+            resolve({ success: false, error: err.message });
+          } else {
+            // Convert attributes to a more usable format
+            const userAttributes = {};
+            attributes.forEach((attr) => {
+              userAttributes[attr.Name] = attr.Value;
+            });
+            resolve({ success: true, attributes: userAttributes });
+          }
+        });
+      });
     });
   }
 
@@ -70,7 +106,7 @@ export class CognitoService {
       const cognitoUser = userPool.getCurrentUser();
 
       if (!cognitoUser) {
-        resolve({ success: false, error: 'No user found' });
+        resolve({ success: false, error: "No user found" });
         return;
       }
 
@@ -84,46 +120,22 @@ export class CognitoService {
           if (err) {
             resolve({ success: false, error: err.message });
           } else {
-            resolve({ success: true, user: { attributes, username: cognitoUser.getUsername() } });
+            resolve({
+              success: true,
+              user: { attributes, username: cognitoUser.getUsername() },
+            });
           }
         });
       });
     });
   }
 
-  // Confirm sign up with verification code
-  static async confirmSignUp(email, code) {
-    return new Promise((resolve) => {
-      const cognitoUser = new CognitoUser({
-        Username: email,
-        Pool: userPool,
-      });
-
-      cognitoUser.confirmRegistration(code, true, (err) => {
-        if (err) {
-          resolve({ success: false, error: err.message });
-        } else {
-          resolve({ success: true });
-        }
-      });
-    });
+  // These can be empty since we don't need verification
+  static async confirmSignUp() {
+    return { success: true };
   }
 
-  // Resend verification code
-  static async resendSignUp(email) {
-    return new Promise((resolve) => {
-      const cognitoUser = new CognitoUser({
-        Username: email,
-        Pool: userPool,
-      });
-
-      cognitoUser.resendConfirmationCode((err) => {
-        if (err) {
-          resolve({ success: false, error: err.message });
-        } else {
-          resolve({ success: true });
-        }
-      });
-    });
+  static async resendSignUp() {
+    return { success: true };
   }
 }

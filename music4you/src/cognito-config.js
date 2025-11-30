@@ -8,7 +8,7 @@ export const cognitoConfig = {
   loadUserInfo: true,
 }
 
-// For local development, you might want a different redirect_uri
+// For development
 export const getConfig = () => {
   const isLocal = window.location.hostname === 'localhost';
   

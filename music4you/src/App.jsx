@@ -1,4 +1,3 @@
-// App.jsx - DEBUG VERSION
 import {
   BrowserRouter as Router,
   Routes,
@@ -9,82 +8,74 @@ import { useState, useEffect } from "react";
 import LoginSignup from "./Pages/LoginSignup";
 import HomePage from "./Pages/HomePage";
 import PlaylistPage from "./Pages/PlaylistPage";
+import { CognitoService } from "./services/cognitoService";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  console.log("App component rendering");
-
   useEffect(() => {
-    console.log("App useEffect running");
-    
-    // Skip auth check entirely for now
-    const checkAuth = () => {
-      console.log("Setting isAuthenticated to false for testing");
-      setIsAuthenticated(false);
-      setIsCheckingAuth(false);
+    const checkAuth = async () => {
+      try {
+        const result = await CognitoService.getCurrentUser();
+        console.log("Auth check result:", result);
+        setIsAuthenticated(result.success);
+      } catch (error) {
+        console.log("Auth check error:", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
     };
 
     checkAuth();
   }, []);
 
-  console.log("Rendering App - isAuthenticated:", isAuthenticated, "isCheckingAuth:", isCheckingAuth);
-
   if (isCheckingAuth) {
-    console.log("Showing loading screen");
     return (
-      <div style={{ 
-        background: '#1a1a1a', 
-        color: 'white', 
-        height: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        fontSize: '24px'
-      }}>
-        Loading... (Checking authentication)
-      </div>
+      <div>Loading...</div>
     );
   }
 
-  console.log("Rendering router");
   return (
-    <div style={{ background: '#1a1a1a', minHeight: '100vh' }}>
-      <Router>
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              <div>
-                <LoginSignup setIsAuthenticated={setIsAuthenticated} />
-              </div>
-            }
-          />
-          <Route
-            path="/home"
-            element={
-              isAuthenticated ? (
-                <HomePage setIsAuthenticated={setIsAuthenticated} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route
-            path="/playlists"
-            element={
-              isAuthenticated ? (
-                <PlaylistPage setIsAuthenticated={setIsAuthenticated} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-          <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
-      </Router>
-    </div>
+    <Router>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            !isAuthenticated ? (
+              <LoginSignup setIsAuthenticated={setIsAuthenticated} />
+            ) : (
+              <Navigate to="/home" />
+            )
+          }
+        />
+        <Route
+          path="/home"
+          element={
+            isAuthenticated ? (
+              <HomePage setIsAuthenticated={setIsAuthenticated} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/playlists"
+          element={
+            isAuthenticated ? (
+              <PlaylistPage setIsAuthenticated={setIsAuthenticated} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/"
+          element={<Navigate to={isAuthenticated ? "/home" : "/login"} />}
+        />
+      </Routes>
+    </Router>
   );
 }
 

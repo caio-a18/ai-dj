@@ -1,10 +1,14 @@
 import m4uLogo from "../Components/assets/M4U_Logo.png";
 import "../Styles/HomePage.css";
 import Menu from "../Components/Menu";
+import UserDisplay from "../Components/UserDisplay";
+import SpotifyConnect from "../Components/SpotifyConnect";
 
 const HomePage = ({ setIsAuthenticated }) => {
   return (
     <div className="homepage-container">
+      <UserDisplay />
+      <SpotifyConnect />
       <Menu setIsAuthenticated={setIsAuthenticated} />
       <div className="header">
         <img src={m4uLogo} alt="M4U Logo" className="logo" />

@@ -4,10 +4,11 @@ import "../Styles/LoginSignup.css";
 import user_icon from "../Components/assets/person.png";
 import email_icon from "../Components/assets/email.png";
 import password_icon from "../Components/assets/password.png";
+import closed_eye from "../Components/assets/pwrd_closed_eye.png";
+import open_eye from "../Components/assets/pwrd_open_eye.png";
 import { CognitoService } from "../services/cognitoService";
 
 const LoginSignup = ({ setIsAuthenticated }) => {
-  console.log("LoginSignup component rendering");
   const [action, setAction] = useState("Login");
   const [formData, setFormData] = useState({
     username: "",
@@ -16,15 +17,13 @@ const LoginSignup = ({ setIsAuthenticated }) => {
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [verificationRequired, setVerificationRequired] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
   const navigate = useNavigate();
 
-  // Button click debug
-  const handleButtonClick = (buttonType) => {
-    console.log(`Button clicked: ${buttonType}`);
-    console.log(`Current action: ${action}`);
-    console.log(`Form data:`, formData);
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   const handleInputChange = (field, value) => {
@@ -32,7 +31,6 @@ const LoginSignup = ({ setIsAuthenticated }) => {
       ...prev,
       [field]: value,
     }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -79,12 +77,21 @@ const LoginSignup = ({ setIsAuthenticated }) => {
         );
 
         if (result.success) {
-          setVerificationRequired(true);
+          const loginResult = await CognitoService.signIn(
+            formData.email,
+            formData.password
+          );
+          
+          if (loginResult.success) {
+            setIsAuthenticated(true);
+            navigate("/home");
+          } else {
+            setErrors({ submit: loginResult.error });
+          }
         } else {
           setErrors({ submit: result.error });
         }
       } else {
-        // Login action
         const result = await CognitoService.signIn(
           formData.email,
           formData.password
@@ -104,52 +111,6 @@ const LoginSignup = ({ setIsAuthenticated }) => {
     }
   };
 
-  const handleVerification = async () => {
-    if (!verificationCode.trim()) {
-      setErrors({ verification: "Verification code is required" });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await CognitoService.confirmSignUp(
-        formData.email,
-        verificationCode
-      );
-      if (result.success) {
-        // After successful verification, automatically log them in
-        const loginResult = await CognitoService.signIn(
-          formData.email,
-          formData.password
-        );
-        if (loginResult.success) {
-          setIsAuthenticated(true);
-          navigate("/home");
-        }
-      } else {
-        setErrors({ verification: result.error });
-      }
-    } catch (error) {
-      setErrors({ verification: error.message });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resendVerificationCode = async () => {
-    setIsLoading(true);
-    try {
-      const result = await CognitoService.resendSignUp(formData.email);
-      if (!result.success) {
-        setErrors({ verification: "Failed to resend code. Please try again." });
-      }
-    } catch (error) {
-      setErrors({ verification: error.message });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const switchToSignUp = () => {
     setAction("Sign Up");
     setFormData({
@@ -158,7 +119,6 @@ const LoginSignup = ({ setIsAuthenticated }) => {
       password: "",
     });
     setErrors({});
-    setVerificationRequired(false);
   };
 
   const switchToLogin = () => {
@@ -169,56 +129,7 @@ const LoginSignup = ({ setIsAuthenticated }) => {
       password: "",
     });
     setErrors({});
-    setVerificationRequired(false);
   };
-
-  // Verification UI
-  if (verificationRequired) {
-    return (
-      <div className="loginsignup-container">
-        <div className="container">
-          <div className="header">
-            <div className="text">Verify Email</div>
-            <div className="underline"></div>
-          </div>
-          <div className="inputs">
-            <div className="input-wrapper">
-              <div className="input">
-                <input
-                  type="text"
-                  placeholder="Enter verification code"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                />
-              </div>
-              {errors.verification && (
-                <div className="error-message">{errors.verification}</div>
-              )}
-            </div>
-            <p className="verification-text">
-              We sent a verification code to {formData.email}
-            </p>
-          </div>
-          <div className="submit-container">
-            <div
-              className="submit"
-              onClick={handleVerification}
-              disabled={isLoading}
-            >
-              {isLoading ? "Verifying..." : "Verify Email"}
-            </div>
-            <div
-              className="submit gray"
-              onClick={resendVerificationCode}
-              disabled={isLoading}
-            >
-              Resend Code
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="loginsignup-container">
@@ -265,13 +176,19 @@ const LoginSignup = ({ setIsAuthenticated }) => {
           </div>
 
           <div className="input-wrapper">
-            <div className="input">
+            <div className="input password-input">
               <img src={password_icon} alt="" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"} // Toggle input type
                 placeholder="Password..."
                 value={formData.password}
                 onChange={(e) => handleInputChange("password", e.target.value)}
+              />
+              <img 
+                src={showPassword ? open_eye : closed_eye} // Toggle eye icon
+                alt={showPassword ? "Hide password" : "Show password"}
+                className="eye-icon"
+                onClick={togglePasswordVisibility}
               />
             </div>
             {errors.password && (
@@ -279,25 +196,25 @@ const LoginSignup = ({ setIsAuthenticated }) => {
             )}
           </div>
         </div>
-        {action === "Sign Up" ? (
-          <div></div>
-        ) : (
-          <div className="forgot-password">
-            Forgot Password? <span>Click Here</span>
-          </div>
+
+        {errors.submit && (
+          <div className="error-message submit-error">{errors.submit}</div>
         )}
+
+        {/* Removed forgot password section */}
+
         <div className="submit-container">
           <div
             className={action === "Login" ? "submit gray" : "submit"}
             onClick={action === "Login" ? switchToSignUp : handleSubmit}
           >
-            Sign Up
+            {isLoading ? "Loading..." : "Sign Up"}
           </div>
           <div
             className={action === "Sign Up" ? "submit gray" : "submit"}
             onClick={action === "Sign Up" ? switchToLogin : handleSubmit}
           >
-            Login
+            {isLoading ? "Loading..." : "Login"}
           </div>
         </div>
       </div>
