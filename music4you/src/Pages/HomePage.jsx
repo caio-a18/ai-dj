@@ -18,12 +18,12 @@ const HomePage = ({ setIsAuthenticated }) => {
       <div className="form-section">
         <input 
           type="text" 
-          placeholder="Enter playlist name" 
+          placeholder="Enter artist name" 
           className="input-field"
         />
         <input 
           type="text" 
-          placeholder="Enter your prompt" 
+          placeholder="Enter song title" 
           className="input-field"
         />
         <div className="number-field">
