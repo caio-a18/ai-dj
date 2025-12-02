@@ -1,3 +1,0 @@
-pytest==8.3.3
-moto[all]==5.0.11
-requests==2.32.3
