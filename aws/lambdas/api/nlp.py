@@ -146,17 +146,4 @@ def parse_music_query(text: str) -> Dict[str, Any]:
 
     return {"artists": artists, "songs": songs, "k": k}
 
-# ---- quick sanity tests (optional; comment out in production) ----------------
-# _tests = [
-#     'give me 5 songs by Drake',
-#     'recommend a couple of tracks from Taylor Swift including "Cardigan"',
-#     "top 3 songs like 'Blinding Lights' by The Weeknd",
-#     'some songs by Bad Bunny',
-#     'playlist with a few tracks from Beyoncé and Jay-Z',
-#     'suggest 10 from Arctic Monkeys including "Do I Wanna Know?" and "505"',
-# ]
-# for q in _tests:
-#     print(">", q)
-#     print(parse_music_query(q))
-#     print("-"*60)
-# # ==============================================================================
+# ==============================================================================

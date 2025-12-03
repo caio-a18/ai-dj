@@ -276,6 +276,41 @@ def create_test_playlist(payload: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
+@app.post("/playlists/parse")
+def parse_nlp_query(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Parse natural language query to extract artists, songs, and count.
+    Expects: { "query": "give me 10 songs by Drake" }
+    Returns: { "artists": [...], "songs": [...], "k": 10 }
+    """
+    try:
+        query = payload.get("query")
+        if not query:
+            raise HTTPException(status_code=400, detail="query is required")
+        
+        # Import NLP module
+        from nlp import parse_music_query
+        
+        # Parse the query
+        result = parse_music_query(query)
+        
+        return {
+            "status": "ok",
+            "parsed": result,
+            "original_query": query
+        }
+        
+    except Exception as e:
+        print(f"Error in parse_nlp_query: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": str(e),
+            "type": type(e).__name__
+        }
+
+
 @app.post("/playlists/generate")
 def generate_playlist_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
