@@ -221,7 +221,7 @@ def spotify_test_auth_url() -> Dict[str, Any]:
         
         # Test SpotifyOAuth with open_browser=False and show_dialog=True
         sp_oauth = SpotifyOAuth(
-            scope="playlist-modify-public playlist-modify-private user-read-private",
+            scope="user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private",
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             redirect_uri="http://127.0.0.1:5173/callback",

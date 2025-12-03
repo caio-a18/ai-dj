@@ -14,6 +14,18 @@ const SpotifyConnect = () => {
     setError('');
 
     try {
+      // IMPORTANT: Clear any existing Spotify tokens before starting new OAuth flow
+      // This ensures we get fresh tokens for the new account
+      sessionStorage.removeItem('spotify_tokens');
+      sessionStorage.removeItem('spotify_auth_in_progress');
+      
+      // Also clear server-side cache
+      await fetch(`${API_BASE_URL}/spotify/disconnect`, {
+        method: 'POST',
+      }).catch(err => console.warn('Failed to clear server cache:', err));
+      
+      console.log('Cleared old Spotify tokens, starting fresh OAuth flow');
+
       // Use the same test-style endpoint that works locally
       const response = await fetch(`${API_BASE_URL}/spotify/test-auth-url`);
       const data = await response.json();
@@ -67,6 +79,9 @@ const SpotifyConnect = () => {
   }, []);
 
   const handleDisconnect = async () => {
+    setIsLoading(true);
+    setError('');
+    
     try {
       // Clear server-side cache
       await fetch(`${API_BASE_URL}/spotify/disconnect`, {
@@ -86,6 +101,9 @@ const SpotifyConnect = () => {
       console.log('Spotify tokens cleared from session and server');
     } catch (e) {
       console.warn('Error clearing spotify tokens', e);
+      setError('Failed to disconnect');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -129,33 +147,17 @@ const SpotifyConnect = () => {
 
   return (
     <div className="spotify-connect-container">
-      {!isConnected ? (
-        <>
-          <button
-            className="spotify-connect-btn"
-            onClick={handleConnectSpotify}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Connecting...' : 'Connect to Spotify'}
-          </button>
-          {error && <p className="spotify-error-message">{error}</p>}
-        </>
-      ) : (
-        <div className="spotify-connected">
-          <p>✓ Connected to Spotify</p>
-          <button 
-            className="spotify-connect-btn" 
-            onClick={handleTestSpotify}
-            disabled={isLoading}
-            style={{marginLeft: 8}}
-          >
-            {isLoading ? 'Creating...' : 'Test Spotify'}
-          </button>
-          <button className="spotify-disconnect-btn" onClick={handleDisconnect} style={{marginLeft: 8}}>
-            Disconnect
-          </button>
-        </div>
-      )}
+      <button
+        className={isConnected ? "spotify-disconnect-btn" : "spotify-connect-btn"}
+        onClick={isConnected ? handleDisconnect : handleConnectSpotify}
+        disabled={isLoading}
+      >
+        {isLoading 
+          ? (isConnected ? 'Disconnecting...' : 'Connecting...') 
+          : (isConnected ? 'Disconnect from Spotify' : 'Connect to Spotify')
+        }
+      </button>
+      {error && <p className="spotify-error-message">{error}</p>}
     </div>
   );
 };

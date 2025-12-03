@@ -94,17 +94,15 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
     try:
         config = _get_spotify_config()
         
-        # Create a fresh SpotifyOAuth instance with a new cache handler
+        # Create a fresh SpotifyOAuth instance without any caching
         # This prevents tokens from being shared between users
-        from memory_cache_handler import MemoryCacheHandler
-        temp_cache = MemoryCacheHandler()
-        
+        # Each user's tokens are managed client-side in sessionStorage
         sp_oauth = SpotifyOAuth(
             client_id=config["client_id"],
             client_secret=config["client_secret"],
             redirect_uri=config["redirect_uri"],
             scope="user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private",
-            cache_handler=temp_cache,  # Use temporary cache for this request
+            cache_path=False,  # Disable caching completely
             show_dialog=True  # Force account selection dialog
         )
         
