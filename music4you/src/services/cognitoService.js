@@ -97,6 +97,16 @@ export class CognitoService {
     if (cognitoUser) {
       cognitoUser.signOut();
     }
+    
+    // Clear Spotify tokens when logging out of Cognito
+    try {
+      sessionStorage.removeItem('spotify_tokens');
+      sessionStorage.removeItem('spotify_auth_in_progress');
+      window.dispatchEvent(new Event('spotify-disconnected'));
+    } catch (e) {
+      console.warn('Error clearing Spotify tokens on logout', e);
+    }
+    
     return { success: true };
   }
 

@@ -21,9 +21,20 @@ function App() {
         const result = await CognitoService.getCurrentUser();
         console.log("Auth check result:", result);
         setIsAuthenticated(result.success);
+        
+        // If no Cognito user, clear Spotify tokens
+        if (!result.success) {
+          sessionStorage.removeItem('spotify_tokens');
+          sessionStorage.removeItem('spotify_auth_in_progress');
+          window.dispatchEvent(new Event('spotify-disconnected'));
+        }
       } catch (error) {
         console.log("Auth check error:", error);
         setIsAuthenticated(false);
+        // Clear Spotify tokens on auth error
+        sessionStorage.removeItem('spotify_tokens');
+        sessionStorage.removeItem('spotify_auth_in_progress');
+        window.dispatchEvent(new Event('spotify-disconnected'));
       } finally {
         setIsCheckingAuth(false);
       }

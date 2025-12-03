@@ -35,33 +35,58 @@ const SpotifyConnect = () => {
   };
 
   useEffect(() => {
-    // If tokens are present from the callback flow, consider user connected
-    try {
-      const tokensRaw = sessionStorage.getItem('spotify_tokens');
-      if (tokensRaw) {
-        const tokens = JSON.parse(tokensRaw);
-        if (tokens && tokens.access_token) {
-          setIsConnected(true);
+    // Check connection state on mount and listen for changes
+    const checkConnection = () => {
+      try {
+        const tokensRaw = sessionStorage.getItem('spotify_tokens');
+        if (tokensRaw) {
+          const tokens = JSON.parse(tokensRaw);
+          if (tokens && tokens.access_token) {
+            setIsConnected(true);
+            return;
+          }
         }
+        setIsConnected(false);
+      } catch (e) {
+        setIsConnected(false);
       }
-    } catch (e) {
-      // ignore parse errors
-    }
-    // listen for disconnect events to update this component
-    const onDisconnect = () => setIsConnected(false);
+    };
+    
+    checkConnection();
+    
+    // Listen for disconnect events
+    const onDisconnect = () => {
+      setIsConnected(false);
+      // Double-check tokens are cleared
+      sessionStorage.removeItem('spotify_tokens');
+      sessionStorage.removeItem('spotify_auth_in_progress');
+    };
+    
     window.addEventListener('spotify-disconnected', onDisconnect);
     return () => window.removeEventListener('spotify-disconnected', onDisconnect);
   }, []);
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     try {
+      // Clear server-side cache
+      await fetch(`${API_BASE_URL}/spotify/disconnect`, {
+        method: 'POST',
+      }).catch(err => console.warn('Failed to clear server cache:', err));
+      
+      // Clear all Spotify-related session storage
       sessionStorage.removeItem('spotify_tokens');
       sessionStorage.removeItem('spotify_auth_in_progress');
+      
+      // Force state update
+      setIsConnected(false);
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new Event('spotify-disconnected'));
+      
+      console.log('Spotify tokens cleared from session and server');
     } catch (e) {
       console.warn('Error clearing spotify tokens', e);
     }
-    setIsConnected(false);
-    window.dispatchEvent(new Event('spotify-disconnected'));
   };
 
   const handleTestSpotify = async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const SpotifyCallback = () => {
@@ -6,8 +6,13 @@ const SpotifyCallback = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('processing');
   const [message, setMessage] = useState('Processing Spotify authorization...');
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
+    // Prevent duplicate calls (React Strict Mode runs effects twice)
+    if (hasProcessed.current) return;
+    hasProcessed.current = true;
+
     const handleCallback = async () => {
       const code = searchParams.get('code');
       const error = searchParams.get('error');
@@ -36,7 +41,11 @@ const SpotifyCallback = () => {
           setMessage('Successfully connected to Spotify!');
           // Store tokens in sessionStorage or localStorage
           if (data.tokens) {
+            console.log('DEBUG: Storing tokens in sessionStorage:', data.tokens);
             sessionStorage.setItem('spotify_tokens', JSON.stringify(data.tokens));
+            console.log('DEBUG: Tokens stored. Verifying:', sessionStorage.getItem('spotify_tokens'));
+          } else {
+            console.error('DEBUG: No tokens in response!', data);
           }
           setTimeout(() => navigate('/'), 2000);
         } else {

@@ -15,6 +15,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from fastapi import HTTPException
 from dotenv import load_dotenv
+from memory_cache_handler import get_memory_cache_handler, clear_spotify_cache
 
 # Load environment variables from .env file (look in data directory)
 env_path = os.path.join(os.path.dirname(__file__), '../../../data/.env')
@@ -52,16 +53,24 @@ def get_auth_url() -> Dict[str, Any]:
         
         # Create SpotifyOAuth instance to use its methods
         sp_oauth = SpotifyOAuth(
-            scope="playlist-modify-public playlist-modify-private user-read-private",
+            scope="user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private",
             client_id=config["client_id"],
             client_secret=config["client_secret"],
             redirect_uri=config["redirect_uri"],
-            cache_path=None,  # Don't use file cache in Lambda
-            open_browser=False  # Don't try to open browser on server-side
+            cache_handler=get_memory_cache_handler(),  # Use memory-only cache
+            open_browser=False,  # Don't try to open browser on server-side
+            show_dialog=True  # Force Spotify to show account selection dialog
         )
         
-        # Get the authorization URL without opening browser
+        # Get the authorization URL and manually add show_dialog parameter
         auth_url = sp_oauth.get_authorize_url()
+        
+        # Ensure show_dialog=true is in the URL
+        if 'show_dialog' not in auth_url:
+            separator = '&' if '?' in auth_url else '?'
+            auth_url = f"{auth_url}{separator}show_dialog=true"
+        
+        print(f"Generated auth URL: {auth_url}")  # Debug log
         
         return {
             "status": "ok",
@@ -85,17 +94,22 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
     try:
         config = _get_spotify_config()
         
-        # Create SpotifyOAuth instance
+        # Create a fresh SpotifyOAuth instance with a new cache handler
+        # This prevents tokens from being shared between users
+        from memory_cache_handler import MemoryCacheHandler
+        temp_cache = MemoryCacheHandler()
+        
         sp_oauth = SpotifyOAuth(
             client_id=config["client_id"],
             client_secret=config["client_secret"],
             redirect_uri=config["redirect_uri"],
-            scope="playlist-modify-public playlist-modify-private user-read-private",
-            cache_path=None  # Don't use file cache in Lambda
+            scope="user-read-private user-read-email playlist-read-private playlist-read-collaborative playlist-modify-public playlist-modify-private",
+            cache_handler=temp_cache,  # Use temporary cache for this request
+            show_dialog=True  # Force account selection dialog
         )
         
         # Exchange code for tokens
-        token_info = sp_oauth.get_access_token(code)
+        token_info = sp_oauth.get_access_token(code, as_dict=True, check_cache=False)
         
         if not token_info:
             raise HTTPException(
@@ -103,7 +117,7 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
                 detail="Failed to exchange code for tokens"
             )
         
-        return {
+        result = {
             "status": "ok",
             "tokens": {
                 "access_token": token_info.get("access_token"),
@@ -112,6 +126,8 @@ def exchange_code_for_tokens(code: str) -> Dict[str, Any]:
                 "token_type": token_info.get("token_type", "Bearer")
             }
         }
+        print(f"DEBUG: Returning tokens to frontend: {result['tokens'].get('access_token')[:20]}..." if result['tokens'].get('access_token') else "No access token!")
+        return result
     except HTTPException:
         raise
     except Exception as e:

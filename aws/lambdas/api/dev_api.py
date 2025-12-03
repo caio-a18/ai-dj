@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import os
+import glob
 
 # Ensure required env defaults for local demo
 os.environ.setdefault("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
+
+# Disable spotipy caching by setting home to a temp location that we control
+os.environ["SPOTIPY_CACHE_PATH"] = ""  # Empty string disables cache
 
 try:
     # When executed as a module (python -m ...)

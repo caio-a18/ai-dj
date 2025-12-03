@@ -121,6 +121,20 @@ def spotify_auth_url() -> Dict[str, Any]:
     return get_auth_url()
 
 
+@app.post("/spotify/disconnect")
+def spotify_disconnect() -> Dict[str, Any]:
+    """
+    Clear Spotify cache on server side when user disconnects.
+    This ensures a fresh auth flow on next connection.
+    """
+    try:
+        from memory_cache_handler import clear_spotify_cache
+        clear_spotify_cache()
+        return {"status": "ok", "message": "Spotify cache cleared"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 @app.get("/spotify/callback")
 def spotify_callback(code: str | None = None) -> Dict[str, Any]:
     """
@@ -156,13 +170,14 @@ def spotify_test() -> Dict[str, Any]:
         if not CLIENT_ID or not CLIENT_SECRET:
             return {"status": "error", "message": "Credentials not found"}
         
-        # Test SpotifyOAuth
+        # Test SpotifyOAuth - don't use cache
         sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
             scope="playlist-modify-public playlist-modify-private user-read-private",
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             redirect_uri="http://127.0.0.1:5173/callback",
-            cache_path=None
+            cache_path=None,  # Critical: Don't cache credentials
+            show_dialog=True
         ))
         
         user = sp.current_user()
@@ -204,17 +219,25 @@ def spotify_test_auth_url() -> Dict[str, Any]:
         if not CLIENT_ID or not CLIENT_SECRET:
             return {"status": "error", "message": "Credentials not found"}
         
-        # Test SpotifyOAuth with open_browser=False
+        # Test SpotifyOAuth with open_browser=False and show_dialog=True
         sp_oauth = SpotifyOAuth(
             scope="playlist-modify-public playlist-modify-private user-read-private",
             client_id=CLIENT_ID,
             client_secret=CLIENT_SECRET,
             redirect_uri="http://127.0.0.1:5173/callback",
             cache_path=None,
-            open_browser=False
+            open_browser=False,
+            show_dialog=True  # Force account selection dialog
         )
         
         auth_url = sp_oauth.get_authorize_url()
+        
+        # Manually ensure show_dialog=true is in the URL
+        if 'show_dialog' not in auth_url:
+            separator = '&' if '?' in auth_url else '?'
+            auth_url = f"{auth_url}{separator}show_dialog=true"
+        
+        print(f"Generated auth URL with show_dialog: {auth_url}")
         
         return {
             "status": "ok",

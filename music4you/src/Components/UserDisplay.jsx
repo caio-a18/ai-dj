@@ -20,12 +20,16 @@ const UserDisplay = () => {
         // Try to load Spotify user from sessionStorage tokens
         try {
           const tokensRaw = sessionStorage.getItem('spotify_tokens');
+          console.log('DEBUG UserDisplay: tokensRaw =', tokensRaw);
           if (tokensRaw) {
             const tokens = JSON.parse(tokensRaw);
+            console.log('DEBUG UserDisplay: parsed tokens =', tokens);
             if (tokens.access_token) {
+              console.log('DEBUG UserDisplay: Fetching Spotify profile with token');
               const resp = await fetch('https://api.spotify.com/v1/me', {
                 headers: { Authorization: `Bearer ${tokens.access_token}` }
               });
+              console.log('DEBUG UserDisplay: Spotify API response status =', resp.status);
               if (resp.ok) {
                 const profile = await resp.json();
                 setSpotifyUser({
