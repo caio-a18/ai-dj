@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import LoginSignup from "./Pages/LoginSignup";
 import HomePage from "./Pages/HomePage";
 import PlaylistPage from "./Pages/PlaylistPage";
+import SpotifyCallback from "./Pages/SpotifyCallback";
 import { CognitoService } from "./services/cognitoService";
 
 function App() {
@@ -69,6 +70,10 @@ function App() {
               <Navigate to="/login" />
             )
           }
+        />
+        <Route
+          path="/callback"
+          element={<SpotifyCallback />}
         />
         <Route
           path="/"

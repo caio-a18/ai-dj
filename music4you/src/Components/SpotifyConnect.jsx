@@ -1,15 +1,93 @@
 import './SpotifyConnect.css';
+import { useState } from 'react';
+import { useEffect } from 'react';
 
 const SpotifyConnect = () => {
-  const handleConnectSpotify = () => {
-    console.log('Connect to Spotify clicked');
-    // Add Spotify OAuth logic here later
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+  const handleConnectSpotify = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Use the same test-style endpoint that works locally
+      const response = await fetch(`${API_BASE_URL}/spotify/test-auth-url`);
+      const data = await response.json();
+
+      if (data.status !== 'ok' || !data.url) {
+        throw new Error(data.message || data.detail || 'Failed to get authorization URL');
+      }
+
+      // Mark auth in progress so callback logic can detect it
+      sessionStorage.setItem('spotify_auth_in_progress', 'true');
+
+      // Redirect browser to Spotify authorize URL
+      window.location.href = data.url;
+    } catch (err) {
+      console.error('Spotify connection error:', err);
+      setError(err.message || 'Failed to connect to Spotify');
+      setIsLoading(false);
+    }
   };
 
+  useEffect(() => {
+    // If tokens are present from the callback flow, consider user connected
+    try {
+      const tokensRaw = sessionStorage.getItem('spotify_tokens');
+      if (tokensRaw) {
+        const tokens = JSON.parse(tokensRaw);
+        if (tokens && tokens.access_token) {
+          setIsConnected(true);
+        }
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+    // listen for disconnect events to update this component
+    const onDisconnect = () => setIsConnected(false);
+    window.addEventListener('spotify-disconnected', onDisconnect);
+    return () => window.removeEventListener('spotify-disconnected', onDisconnect);
+  }, []);
+
+  const handleDisconnect = () => {
+    try {
+      sessionStorage.removeItem('spotify_tokens');
+      sessionStorage.removeItem('spotify_auth_in_progress');
+    } catch (e) {
+      console.warn('Error clearing spotify tokens', e);
+    }
+    setIsConnected(false);
+    window.dispatchEvent(new Event('spotify-disconnected'));
+  };
+
+  // keep this component reactive when other parts of the app disconnect
+
   return (
-    <button className="spotify-connect-btn" onClick={handleConnectSpotify}>
-      Connect to Spotify
-    </button>
+    <div className="spotify-connect-container">
+      {!isConnected ? (
+        <>
+          <button
+            className="spotify-connect-btn"
+            onClick={handleConnectSpotify}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Connecting...' : 'Connect to Spotify'}
+          </button>
+          {error && <p className="spotify-error-message">{error}</p>}
+        </>
+      ) : (
+        <div className="spotify-connected">
+          <p>✓ Connected to Spotify</p>
+          <button className="spotify-disconnect-btn" onClick={handleDisconnect} style={{marginLeft: 8}}>
+            Disconnect
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
