@@ -230,6 +230,117 @@ def spotify_test_auth_url() -> Dict[str, Any]:
         }
 
 
+@app.post("/spotify/create-test-playlist")
+def create_test_playlist(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create an empty test playlist on the user's Spotify account.
+    Expects: { "access_token": "..." }
+    """
+    try:
+        import spotipy
+        from spotipy.oauth2 import SpotifyOAuth
+        
+        access_token = payload.get("access_token")
+        if not access_token:
+            raise HTTPException(status_code=400, detail="access_token is required")
+        
+        # Create Spotify client with user's access token
+        sp = spotipy.Spotify(auth=access_token)
+        
+        # Get current user info
+        user = sp.current_user()
+        user_id = user['id']
+        
+        # Create empty playlist
+        playlist = sp.user_playlist_create(
+            user=user_id,
+            name="AI-DJ Test Playlist",
+            public=False,
+            description="Test playlist created by AI-DJ"
+        )
+        
+        return {
+            "status": "ok",
+            "message": "Test playlist created successfully!",
+            "playlist": {
+                "id": playlist['id'],
+                "name": playlist['name'],
+                "url": playlist['external_urls']['spotify']
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "type": type(e).__name__
+        }
+
+
+@app.post("/playlists/generate")
+def generate_playlist_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Generate playlist using ML model.
+    Expects: { "artist": "...", "song": "...", "song_count": 25, "access_token": "..." }
+    """
+    try:
+        artist = payload.get("artist")
+        song = payload.get("song")
+        song_count = payload.get("song_count", 25)
+        access_token = payload.get("access_token")
+        
+        if not artist or not song:
+            raise HTTPException(status_code=400, detail="artist and song are required")
+        
+        if not access_token:
+            raise HTTPException(status_code=400, detail="access_token is required")
+        
+        # Import the playlist generator
+        from playlist_generator import generate_playlist
+        
+        # Set up DynamoDB table - MUST use us-east-2 where table exists
+        import boto3
+        AWS_REGION = "us-east-2"  # Hardcode the correct region
+        aws_profile = os.environ.get("AWS_PROFILE", "DevMusic4You-411189321562")
+        
+        # Create session with profile
+        print(f"Using AWS profile: {aws_profile}, region: {AWS_REGION}")
+        session = boto3.Session(profile_name=aws_profile, region_name=AWS_REGION)
+        
+        # Test connection
+        sts = session.client('sts')
+        identity = sts.get_caller_identity()
+        print(f"Connected as: {identity['Arn']}")
+        
+        dynamodb = session.resource('dynamodb', region_name=AWS_REGION)
+        datasets_table = dynamodb.Table('aidj_datasets')
+        playlists_table = dynamodb.Table('aidj_playlists')
+        
+        # Verify tables exist
+        print(f"DynamoDB datasets table: {datasets_table.table_name}")
+        print(f"DynamoDB playlists table: {playlists_table.table_name}")
+        
+        # Generate the playlist
+        result = generate_playlist(
+            artist=artist,
+            song=song,
+            song_count=song_count,
+            access_token=access_token,
+            datasets_table=datasets_table,
+            playlists_table=playlists_table
+        )
+        
+        return result
+        
+    except Exception as e:
+        print(f"Error in generate_playlist_endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": str(e),
+            "type": type(e).__name__
+        }
+
 
 # Lambda handler
 handler = Mangum(app)

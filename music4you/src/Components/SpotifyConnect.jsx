@@ -64,6 +64,42 @@ const SpotifyConnect = () => {
     window.dispatchEvent(new Event('spotify-disconnected'));
   };
 
+  const handleTestSpotify = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const tokensRaw = sessionStorage.getItem('spotify_tokens');
+      if (!tokensRaw) {
+        throw new Error('Not connected to Spotify');
+      }
+
+      const tokens = JSON.parse(tokensRaw);
+      const response = await fetch(`${API_BASE_URL}/spotify/create-test-playlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          access_token: tokens.access_token
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.status === 'ok') {
+        alert(`✓ Success! Created playlist: ${data.playlist.name}\n\nCheck your Spotify account!`);
+      } else {
+        throw new Error(data.message || 'Failed to create test playlist');
+      }
+    } catch (err) {
+      console.error('Test Spotify error:', err);
+      setError(err.message || 'Failed to create test playlist');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // keep this component reactive when other parts of the app disconnect
 
   return (
@@ -82,6 +118,14 @@ const SpotifyConnect = () => {
       ) : (
         <div className="spotify-connected">
           <p>✓ Connected to Spotify</p>
+          <button 
+            className="spotify-connect-btn" 
+            onClick={handleTestSpotify}
+            disabled={isLoading}
+            style={{marginLeft: 8}}
+          >
+            {isLoading ? 'Creating...' : 'Test Spotify'}
+          </button>
           <button className="spotify-disconnect-btn" onClick={handleDisconnect} style={{marginLeft: 8}}>
             Disconnect
           </button>

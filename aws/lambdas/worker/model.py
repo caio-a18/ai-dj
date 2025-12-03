@@ -28,7 +28,7 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
 # -------------------------------------------------------------------
 # 0. AWS / DynamoDB setup
 # -------------------------------------------------------------------
-session = boto3.Session(profile_name='default7', region_name='us-east-2')
+session = boto3.Session(profile_name='DevMusic4You-411189321562', region_name='us-east-2')
 dynamodb = session.resource('dynamodb')
 s3 = session.client("s3")
 BUCKET_NAME = "aidj-data"
