@@ -53,3 +53,11 @@ Operational notes:
 - Observe queue depth and age of oldest message to track backlog.
 - Monitor Lambda duration/error rate; adjust concurrency if needed.
 - Use DLQ metrics to prioritize investigation and remediation.
+
+## Running Locally
+To run locally follow the following:
+Frontend:
+CD into the music4you folder and run "npx vite --host 127.0.0.1" this will run the front end.
+
+Backend:
+for the backend you must get into the aws/lambdas/api folder and run python dev_api.py
