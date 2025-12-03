@@ -61,3 +61,6 @@ CD into the music4you folder and run "npx vite --host 127.0.0.1" this will run t
 
 Backend:
 for the backend you must get into the aws/lambdas/api folder and run python dev_api.py
+
+AWS configuration:
+Use this command in your terminal after downloading aws cli, aws sts get-caller-identity --profile DevMusic4You-411189321562

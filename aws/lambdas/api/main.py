@@ -334,6 +334,44 @@ def parse_nlp_query(payload: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
+def get_artist_top_song_from_deezer(artist_name: str) -> str:
+    """
+    Fallback function: Get artist's most popular song from Deezer API.
+    Returns the top song title or None if not found.
+    """
+    try:
+        import requests
+        url = f"https://api.deezer.com/search/artist?q={artist_name}"
+        response = requests.get(url, timeout=5)
+        
+        if response.status_code != 200:
+            print(f"Deezer artist search failed with status {response.status_code}")
+            return None
+        
+        data = response.json()
+        if 'data' in data and data['data']:
+            # Get the first (most popular) artist
+            artist_id = data['data'][0]['id']
+            
+            # Get artist's top tracks
+            top_url = f"https://api.deezer.com/artist/{artist_id}/top?limit=1"
+            top_response = requests.get(top_url, timeout=5)
+            
+            if top_response.status_code == 200:
+                top_data = top_response.json()
+                if 'data' in top_data and top_data['data']:
+                    top_song = top_data['data'][0]['title']
+                    print(f"✓ Found top song for '{artist_name}': '{top_song}'")
+                    return top_song
+        
+        print(f"No top song found for artist: {artist_name}")
+        return None
+        
+    except Exception as e:
+        print(f"Error fetching top song from Deezer: {e}")
+        return None
+
+
 @app.post("/playlists/generate")
 def generate_playlist_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -346,8 +384,19 @@ def generate_playlist_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
         song_count = payload.get("song_count", 25)
         access_token = payload.get("access_token")
         
-        if not artist or not song:
-            raise HTTPException(status_code=400, detail="artist and song are required")
+        if not artist:
+            raise HTTPException(status_code=400, detail="artist is required")
+        
+        # Fallback: If no song provided, get artist's most popular song from Deezer
+        if not song or song.strip() == "":
+            print(f"No song title provided. Searching for '{artist}' top song on Deezer...")
+            song = get_artist_top_song_from_deezer(artist)
+            
+            if not song:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"No song title provided and could not find top song for artist '{artist}'"
+                )
         
         if not access_token:
             raise HTTPException(status_code=400, detail="access_token is required")
